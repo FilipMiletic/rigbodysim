@@ -1,0 +1,25 @@
+#Basic principles
+
+acceleration -> speed -> position
+
+_[a] => [v] => [p]_
+
+* a = acceleration [m/s^2]
+* v = velocity [m/s]
+* p = position [m]
+
+** Add _time_ (t) value in all the calculations **
+
+
+#Numerical analysis and integration
+
+If we split time in differential segments, where each segment takes 16ms,
+we could take them for calculating parameters and then redner them at screen.
+We must be sure, that in each sequence we calculate game logic, _and_ rendering,
+_and_ maintain 60fps for the simulation display on the screen.
+
+* delta time = will be small time sequence which we will use for calculation and rendering
+
+We will use Implicit Euler-integration
+
+
