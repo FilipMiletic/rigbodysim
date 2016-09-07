@@ -113,6 +113,23 @@ public class rigbodysim implements KeyListener, WindowListener {
     }
 
     public static void main(String[] args) {
+        final float PI180 = 180.0f / (float)Math.PI;
+        
+        float x = 60;
+        float y = 30;
+
+        float cos = (float)Math.cos(Math.PI * 2);
+        float sin = (float)Math.sin(Math.PI * 1.5);
+        System.out.println(cos*x + " - " + sin*y);
+
+        float angle = (float)Math.atan2(y, x);
+        System.out.println(angle + " = in deegres:" + (PI180 * angle));
+
+        float rx = (float)Math.cos(angle);
+        float ry = (float)Math.sin(angle);
+        System.out.println(rx + " - " + ry);
+
+
 
         rigbodysim game = new rigbodysim();
         game.run();
@@ -305,7 +322,8 @@ public class rigbodysim implements KeyListener, WindowListener {
     private float accY;
 
     private void updateGame(float dt) {
-        accX = accY = -15f;
+        accX = 0;
+        accY = -15f / dt;
 
 
         if (isKeyDown(87)) {
@@ -318,10 +336,10 @@ public class rigbodysim implements KeyListener, WindowListener {
 
         if (isKeyDown(65)) {
             // A pressed
-            accX -= 1f / dt;
+            accX -= 10f / dt;
         } else if (isKeyDown(68)) {
             // D pressed
-            accX += 1f / dt;
+            accX += 10f / dt;
         }
 
         // Explicit Euler
