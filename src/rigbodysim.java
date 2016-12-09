@@ -241,11 +241,19 @@ public class rigbodysim implements KeyListener, WindowListener {
     private Vec2f pos;
     private Vec2f vel;
     private Vec2f acc;
+    private Vec2f radius;
 
     private void initGame() {
         pos = new Vec2f(WIDTH / 2f, HEIGHT / 2f);
         vel = new Vec2f();
         acc = new Vec2f();
+        radius = new Vec2f(10f, 10f);
+    }
+
+    private void collisionResponse(Vec2f n, float restitution) {
+        float projVel = vel.dot(n);
+        float e = 1.0f + restitution;
+        vel.addMulScalar(n, -projVel * e);
     }
 
     private void updateGame(float dt) {
@@ -269,28 +277,34 @@ public class rigbodysim implements KeyListener, WindowListener {
         }
 
         // Explicit Euler
-        vel.x += acc.x * dt;
-        vel.y += acc.y * dt;
-        pos.x += vel.x * dt;
-        pos.y += vel.y * dt;
+        vel.addMulScalar(acc, dt);
+        pos.addMulScalar(vel, dt);
 
-        // Collision (Pong implementation)
-        if (pos.x < 50f) {
-            pos.x = 50f;
-            vel.x = -vel.x;
+        // Collision and reaction
+        Vec2f n = new Vec2f();
+        // Enables bouncing depending on the state (0/1)
+        float restitution = 0f;
+        if (pos.x < 0 + radius.x) {
+            pos.x = 0 + radius.x;
+            n.set(1, 0);
+            collisionResponse(n, restitution);
         }
-        if (pos.x > WIDTH - 1 - 50f) {
-            pos.x = WIDTH - 1 - 50f;
-            vel.x = -vel.x;
-        }
+        if (pos.x > WIDTH - 1 - radius.x) {
+            pos.x = WIDTH - 1 - radius.x;
+            n.set(-1, 0);
+            collisionResponse(n, restitution);
 
-        if (pos.y < 50f) {
-            pos.y = 50f;
-            vel.y = -vel.y;
         }
-        if (pos.y > HEIGHT - 1 - 50f) {
-            pos.y = HEIGHT - 1 - 50f;
-            vel.y = -vel.y;
+        if (pos.y < 0 + radius.y) {
+            pos.y = 0 + radius.y;
+            n.set(0, 1);
+            collisionResponse(n, restitution);
+
+        }
+        if (pos.y > HEIGHT - 1 - radius.x) {
+            pos.y = HEIGHT - 1 - radius.x;
+            n.set(0, -1);
+            collisionResponse(n, restitution);
         }
     }
 
@@ -298,6 +312,6 @@ public class rigbodysim implements KeyListener, WindowListener {
         for (int i = 0; i < WIDTH * HEIGHT; i++) {
             frameBufferData[i] = 0x000000;
         }
-        drawRect(pos.x - 50f, pos.y - 50f, pos.x + 50f, pos.y + 50f, 0xFF0000);
+        drawRect(pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y, 0xFF0000);
     }
 }
