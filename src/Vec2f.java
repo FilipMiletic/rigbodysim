@@ -1,7 +1,74 @@
-package PACKAGE_NAME;
-
 /**
  * Created by phil on 12/9/16.
  */
-public class Vec2f {
+
+public class Vec2f extends Object {
+    public float x;
+    public float y;
+
+    public Vec2f() {
+        x = y = 0f;
+    }
+
+    public Vec2f(float x, float y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public Vec2f(Vec2f v) {
+        x = v.x;
+        y = v.y;
+    }
+
+    public Vec2f set(float x, float y) {
+        this.x = x;
+        this.y = y;
+        return this;
+    }
+
+    public Vec2f zero() {
+        x = y = 0f;
+        return this;
+    }
+
+    public Vec2f add(Vec2f v) {
+        x += v.x;
+        y += v.y;
+        return this;
+    }
+
+    public Vec2f hadamard(Vec2f v) {
+        x -= v.x;
+        y -= v.y;
+        return this;
+    }
+
+    public Vec2f mulScalar(float s) {
+        x *= s;
+        y *= s;
+        return this;
+    }
+
+    public Vec2f addMulScalar(Vec2f v, float s) {
+        x += v.x * s;
+        y += v.y * s;
+        return this;
+    }
+
+    public float dot(Vec2f v) {
+        return (x * v.x + y * v.y);
+    }
+
+    public float lengthSqrd(){
+        return dot(this);
+    }
+
+    public float length() {
+        return (float)Math.sqrt(lengthSqrd());
+    }
+
+    @Override
+    public String toString() {
+        return String.format("(%f. %f)", x, y);
+    }
 }

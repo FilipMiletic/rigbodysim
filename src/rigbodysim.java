@@ -53,84 +53,7 @@ public class rigbodysim implements KeyListener, WindowListener {
         canvas.requestFocus();
     }
 
-    @SuppressWarnings("unused")
-    private static void integrationTest() {
-
-        final int acceleration = 10;
-
-        System.out.println("Time-position calculation, constant, linear");
-        final int time = 10;
-
-        for (int t = 1; t <= time; t++) {
-            int distance = (acceleration / 2) * t * t;
-            int speed = acceleration * t;
-            System.out.println(String.format("%d.) Speed: %d, Distance: %d", t, speed, distance ));
-        }
-
-        System.out.println("");
-        System.out.println("Implicit Eluer Integration");
-
-        final int numSteps = 100;
-        final float timeDifference = 1.0f;
-        final float timeDifferenceStep = 1.0f / (float)numSteps;
-        float position = 0.0f;
-        float startPosition = 0.0f;
-        for (int frame =  0; frame < time; frame++) {
-
-            for (int step = 0; step < numSteps; step++) {
-                position = position + startPosition * timeDifferenceStep;
-                startPosition = startPosition + (float)acceleration * timeDifferenceStep;
-            }
-
-            System.out.println(String.format("%d.) startPosition: %f, Position: %f", frame, startPosition, position));
-        }
-
-        System.out.println("");
-        System.out.println("Explicit Euler Integration");
-
-        position = 0.0f;
-        startPosition = 0.0f;
-        for (int i=0; i < time; i++) {
-            for (int step = 0; step < numSteps; step++) {
-                startPosition = startPosition + (float)acceleration * timeDifferenceStep;
-                position = position + startPosition * timeDifferenceStep;
-            }
-            System.out.println(String.format("%d.) startPosition: %f, Position: %f", i, startPosition, position));
-        }
-
-        System.out.println("");
-        System.out.println("Fixed Euler Integration");
-
-        position = 0.0f;
-        startPosition = 0.0f;
-        for (int i = 0; i < time; i++) {
-            float otherStartPosition = startPosition;
-            startPosition = startPosition + (float)acceleration * timeDifference;
-            position = position + (otherStartPosition + startPosition) / 2f * timeDifference;
-            System.out.println(String.format("%d.) startPosition: %f, Position: %f", i, startPosition, position));
-        }
-
-    }
-
     public static void main(String[] args) {
-        final float PI180 = 180.0f / (float)Math.PI;
-        
-        float x = 60;
-        float y = 30;
-
-        float cos = (float)Math.cos(Math.PI * 2);
-        float sin = (float)Math.sin(Math.PI * 1.5);
-        System.out.println(cos*x + " - " + sin*y);
-
-        float angle = (float)Math.atan2(y, x);
-        System.out.println(angle + " = in deegres:" + (PI180 * angle));
-
-        float rx = (float)Math.cos(angle);
-        float ry = (float)Math.sin(angle);
-        System.out.println(rx + " - " + ry);
-
-
-
         rigbodysim game = new rigbodysim();
         game.run();
     }
@@ -192,6 +115,8 @@ public class rigbodysim implements KeyListener, WindowListener {
     }
 
     private void run() {
+        initGame();
+
         final long TARGET_FPS = 60;
         final long NANO_SECOND = 1000000000;
         final long NANO_SECONDS_FPS = NANO_SECOND / TARGET_FPS;
@@ -203,6 +128,7 @@ public class rigbodysim implements KeyListener, WindowListener {
         while (isRunning) {
             long frameStartTime = System.nanoTime();
 
+            // TODO: Further implementation
             updateGame(DT);
 
             renderGame();
@@ -312,50 +238,66 @@ public class rigbodysim implements KeyListener, WindowListener {
         }
     }
 
-    private float posX;
-    private float posY;
+    private Vec2f pos;
+    private Vec2f vel;
+    private Vec2f acc;
 
-    private float velX;
-    private float velY;
-
-    private float accX;
-    private float accY;
+    private void initGame() {
+        pos = new Vec2f(WIDTH / 2f, HEIGHT / 2f);
+        vel = new Vec2f();
+        acc = new Vec2f();
+    }
 
     private void updateGame(float dt) {
-        accX = 0;
-        accY = -15f / dt;
-
+        acc.x = 0;
+        acc.y = 0;
 
         if (isKeyDown(87)) {
             // W pressed
-            accY += 1f / dt;
+            acc.y += 10f / dt;
         } else if (isKeyDown(83)) {
             // S pressed
-            accY -= 1f / dt;
+            acc.y -= 10f / dt;
         }
 
         if (isKeyDown(65)) {
             // A pressed
-            accX -= 10f / dt;
+            acc.x -= 10f / dt;
         } else if (isKeyDown(68)) {
             // D pressed
-            accX += 10f / dt;
+            acc.x += 10f / dt;
         }
 
         // Explicit Euler
-        velX += accX * dt;
-        velY += accY * dt;
-        posX += velX * dt;
-        posY += velY * dt;
+        vel.x += acc.x * dt;
+        vel.y += acc.y * dt;
+        pos.x += vel.x * dt;
+        pos.y += vel.y * dt;
+
+        // Collision (Pong implementation)
+        if (pos.x < 50f) {
+            pos.x = 50f;
+            vel.x = -vel.x;
+        }
+        if (pos.x > WIDTH - 1 - 50f) {
+            pos.x = WIDTH - 1 - 50f;
+            vel.x = -vel.x;
+        }
+
+        if (pos.y < 50f) {
+            pos.y = 50f;
+            vel.y = -vel.y;
+        }
+        if (pos.y > HEIGHT - 1 - 50f) {
+            pos.y = HEIGHT - 1 - 50f;
+            vel.y = -vel.y;
+        }
     }
 
     private void renderGame() {
         for (int i = 0; i < WIDTH * HEIGHT; i++) {
             frameBufferData[i] = 0x000000;
         }
-        drawRect(posX, posY, posX + 100f, posY + 100f, 0xFF0000);
-
-//        drawLine(-300, 0, 500, 500, 0x0000FF);
+        drawRect(pos.x - 50f, pos.y - 50f, pos.x + 50f, pos.y + 50f, 0xFF0000);
     }
-
 }
