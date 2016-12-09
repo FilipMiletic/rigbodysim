@@ -238,16 +238,36 @@ public class rigbodysim implements KeyListener, WindowListener {
         }
     }
 
+    class Plane {
+        public final Vec2f normal;
+        public final float distance;
+
+        public Plane(Vec2f normal, float distance) {
+            this.normal = normal;
+            this.distance = distance;
+        }
+
+        public Vec2f getPoint() {
+            return new Vec2f(normal).mulScalar(distance);
+        }
+    }
+
     private Vec2f pos;
     private Vec2f vel;
     private Vec2f acc;
     private Vec2f radius;
+    private Plane[] planes;
 
     private void initGame() {
         pos = new Vec2f(WIDTH / 2f, HEIGHT / 2f);
         vel = new Vec2f();
         acc = new Vec2f();
-        radius = new Vec2f(10f, 10f);
+        radius = new Vec2f(50f, 50f);
+        planes = new Plane[4];
+        planes[0] = new Plane(new Vec2f(0, 1), 0);
+        planes[1] = new Plane(new Vec2f(0, -1), -(HEIGHT - 1));
+        planes[2] = new Plane(new Vec2f(1, 0), 0);
+        planes[3] = new Plane(new Vec2f(-1, 0), -(WIDTH - 1));
     }
 
     private void collisionResponse(Vec2f n, float restitution) {
@@ -281,9 +301,19 @@ public class rigbodysim implements KeyListener, WindowListener {
         pos.addMulScalar(vel, dt);
 
         // Collision and reaction
-        Vec2f n = new Vec2f();
         // Enables bouncing depending on the state (0/1)
+
         float restitution = 0f;
+        for (Plane plane: planes) {
+            Vec2f pointOnPlane = plane.getPoint();
+            Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(pos);
+            float projDistance = distanceToPlane.dot(plane.normal);
+            float projRadius =  Math.abs(radius.dot(plane.normal));
+            float d = projDistance + projRadius;
+            System.out.println(d);
+        }
+        /*
+        Vec2f n = new Vec2f();
         if (pos.x < 0 + radius.x) {
             pos.x = 0 + radius.x;
             n.set(1, 0);
@@ -293,25 +323,33 @@ public class rigbodysim implements KeyListener, WindowListener {
             pos.x = WIDTH - 1 - radius.x;
             n.set(-1, 0);
             collisionResponse(n, restitution);
-
         }
         if (pos.y < 0 + radius.y) {
             pos.y = 0 + radius.y;
             n.set(0, 1);
             collisionResponse(n, restitution);
-
         }
         if (pos.y > HEIGHT - 1 - radius.x) {
             pos.y = HEIGHT - 1 - radius.x;
             n.set(0, -1);
             collisionResponse(n, restitution);
         }
+        */
     }
 
     private void renderGame() {
         for (int i = 0; i < WIDTH * HEIGHT; i++) {
             frameBufferData[i] = 0x000000;
         }
+
+        for (Plane plane: planes) {
+            Vec2f point = plane.getPoint();
+            drawRect(point.x - radius.x, point.y - radius.y, point.x + radius.x, point.y + radius.y, 0xFFFFFF);
+        }
+
         drawRect(pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y, 0xFF0000);
+        drawRect(pos.x - 2, pos.y - 2, pos.x + 2, pos.y + 2, 0xFF0000);
     }
 }
+
+// TODO: Continue from part 16
