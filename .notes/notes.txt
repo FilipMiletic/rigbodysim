@@ -8,7 +8,7 @@ _[a] => [v] => [p]_
 * v = velocity [m/s]
 * p = position [m]
 
-** Add _time_ (t) value in all the calculations **
+Add _time_ (t) value in all the calculations
 
 # Numerical analysis and integration
 
@@ -20,3 +20,13 @@ _and_ maintain 60fps for the simulation display on the screen.
 * delta time = will be small time sequence which we will use for calculation and rendering
 
 We will use Implicit Euler-integration
+--------------------------------------------------------------------------------
+
+12/10/2017
+
+# Collision
+* Minimum Translation Vector -> MTV = n^ x d
+
+# Mouse Implementation
+* Correct mouse movement and mouse tracking via 'MouseEventListener'
+~> * Mouse rectangle dragging 
