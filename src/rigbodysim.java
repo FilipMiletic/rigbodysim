@@ -8,15 +8,14 @@
 
 import javax.swing.*;
 
-import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
+import java.awt.Canvas;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 
-public class rigbodysim implements KeyListener, WindowListener {
+public class rigbodysim implements KeyListener, WindowListener, MouseListener, MouseMotionListener {
 
     private final String TITLE = "PhySim";
     private final int WIDTH = 800;
@@ -26,6 +25,9 @@ public class rigbodysim implements KeyListener, WindowListener {
     private BufferedImage frameBuffer;
     private int[] frameBufferData;
     private boolean[] keyState = new boolean[128];
+    private boolean[] mouseState = new boolean[16];
+    private Vec2i mousePos = new Vec2i();
+
 
     public rigbodysim() {
         frameBuffer = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
@@ -44,6 +46,8 @@ public class rigbodysim implements KeyListener, WindowListener {
         canvas.setPreferredSize(new Dimension(WIDTH, HEIGHT));
         canvas.setIgnoreRepaint(true);
         canvas.addKeyListener(this);
+        canvas.addMouseListener(this);
+        canvas.addMouseMotionListener(this);
         frame.add(canvas);
 
         frame.pack();
@@ -114,6 +118,39 @@ public class rigbodysim implements KeyListener, WindowListener {
         }
     }
 
+    @Override
+    public void mouseDragged(MouseEvent e) {
+        mousePos.set(e.getX(), e.getY());
+    }
+
+    @Override
+    public void mouseMoved(MouseEvent e) {
+        mousePos.set(e.getX(), e.getY());
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+
+    }
+
+    @Override
+    public void mousePressed(MouseEvent e) {
+        mouseState[e.getButton()] = true;
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        mouseState[e.getButton()] = false;
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+    }
+
     private void run() {
         initGame();
 
@@ -127,10 +164,8 @@ public class rigbodysim implements KeyListener, WindowListener {
 
         while (isRunning) {
             long frameStartTime = System.nanoTime();
-
-            // TODO: Further implementation
+            
             updateGame(DT);
-
             renderGame();
 
             // Framebuffer displaying
@@ -161,8 +196,12 @@ public class rigbodysim implements KeyListener, WindowListener {
         }
     }
 
+    private int getY(int y) {
+        return HEIGHT - 1 - y;
+    }
+
     private void setPixel(int x, int y, int color) {
-            int index = (HEIGHT - 1 - y) * WIDTH + x;
+            int index = getY(y) * WIDTH + x;
             frameBufferData[index] = color;
     }
 
@@ -201,50 +240,66 @@ public class rigbodysim implements KeyListener, WindowListener {
         drawRect((int)x0, (int)y0, (int)x1, (int)y1, color);
     }
 
-        private void drawLine(int x0, int y0, int x1, int y1, int color) {
-        int minX = Math.min(x0, x1);
-        int minY = Math.min(y0, y1);
-        int maxX = Math.max(x0, x1);
-        int maxY = Math.max(y0, y1);
+    private void drawLine(int x0, int y0, int x1, int y1, int color) {
+        int minX = x0;
+        int minY = y0;
+        int maxX = x1;
+        int maxY = y1;
 
         int dx = maxX - minX;
         int dy = maxY - minY;
 
-        setPixelSafe(minX, minY, color);
-        setPixelSafe(maxX, maxY, color);
+        int signX = dx < 0 ? -1 : 1;
+        int signY = dy < 0 ? -1 : 1;
 
-        if (Math.abs(dx) > Math.abs(dy)) {
+        dx = Math.abs(dx);
+        dy = Math.abs(dy);
+
+
+        if (dx > dy) {
             int err = dx / 2;
-            int y = minY;
-            for (int x = minX + 1; x < maxX; x++) {
+            int y = 0;
+            for (int x = 0; x < dx; x++) {
                 err = err - dy;
                 if (err < 0) {
                     y++;
                     err = err + dx;
                 }
-                setPixelSafe(x, y, color);
+                setPixelSafe(minX + x * signX, minY + y * signY, color);
             }
         } else {
             int err = dy / 2;
-            int x = minX;
-            for (int y = minY + 1; y < maxY; y++) {
+            int x = 0;
+            for (int y = 0; y < dy; y++) {
                 err = err - dx;
                 if (err < 0) {
                     x++;
                     err = err + dy;
                 }
-                setPixelSafe(x, y, color);
+                setPixelSafe(minX + x * signX, minY + y * signY, color);
             }
         }
     }
 
+    private void drawLine(float x0, float y0, float x1, float y1, int color) {
+        drawLine((int)x0, (int)y0, (int)x1, (int)y1, color);
+    }
+
+    private void drawPoint(float x, float y, float radius, int color) {
+        drawRect(x - radius, y - radius, x + radius, y + radius, color);
+    }
+
+
+
     class Plane {
         public final Vec2f normal;
         public final float distance;
+        public final float len;
 
-        public Plane(Vec2f normal, float distance) {
+        public Plane(Vec2f normal, float distance, float len) {
             this.normal = normal;
             this.distance = distance;
+            this.len = len;
         }
 
         public Vec2f getPoint() {
@@ -264,10 +319,10 @@ public class rigbodysim implements KeyListener, WindowListener {
         acc = new Vec2f();
         radius = new Vec2f(50f, 50f);
         planes = new Plane[4];
-        planes[0] = new Plane(new Vec2f(0, 1), 0);
-        planes[1] = new Plane(new Vec2f(0, -1), -(HEIGHT - 1));
-        planes[2] = new Plane(new Vec2f(1, 0), 0);
-        planes[3] = new Plane(new Vec2f(-1, 0), -(WIDTH - 1));
+        planes[0] = new Plane(new Vec2f(0, 1), 50, WIDTH - 1);
+        planes[1] = new Plane(new Vec2f(0, -1), -(HEIGHT - 1 - 50), -(WIDTH - 1));
+        planes[2] = new Plane(new Vec2f(1, 0), 50, -(HEIGHT - 1));
+        planes[3] = new Plane(new Vec2f(-1, 0), -(WIDTH - 1 - 50), HEIGHT - 1);
     }
 
     private void collisionResponse(Vec2f n, float restitution) {
@@ -276,7 +331,33 @@ public class rigbodysim implements KeyListener, WindowListener {
         vel.addMulScalar(n, -projVel * e);
     }
 
+    private boolean isPointInRect(float x, float y, float x0, float y0, float x1, float y1) {
+        return !(x < x0 || x > x1 || y < y0 || y > y1);
+    }
+
+    private boolean rectDragging = false;
+    private Vec2i rectDragStart = new Vec2i();
+    // TODO: FIX MOUSE DRAGGIN!!!
     private void updateGame(float dt) {
+        boolean leftMousePressed = mouseState[1];
+        if (!rectDragging) {
+            if (isPointInRect(mousePos.x, getY(mousePos.y), pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y) && leftMousePressed) {
+                rectDragging = true;
+                rectDragStart.set(mousePos);
+            } else {
+                if (leftMousePressed) {
+                    int dx = mousePos.x - rectDragStart.x;
+                    int dy = mousePos.y - rectDragStart.y;
+                    pos.x += dx;
+                    pos.y += dy * (-1);
+                    rectDragStart.set(mousePos);
+                } else {
+                    rectDragging = false;
+                }
+            }
+
+        }
+
         acc.x = 0;
         acc.y = 0;
 
@@ -301,40 +382,21 @@ public class rigbodysim implements KeyListener, WindowListener {
         pos.addMulScalar(vel, dt);
 
         // Collision and reaction
-        // Enables bouncing depending on the state (0/1)
-
-        float restitution = 0f;
+        // float restitution: Enables bouncing, coefficient
+        float restitution = 0.4f;
         for (Plane plane: planes) {
             Vec2f pointOnPlane = plane.getPoint();
             Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(pos);
             float projDistance = distanceToPlane.dot(plane.normal);
-            float projRadius =  Math.abs(radius.dot(plane.normal));
-            float d = projDistance + projRadius;
-            System.out.println(d);
+            // ~FIX: kinda fixed red box' position in coordinate system
+            float projRadius =  -Math.abs(radius.dot(plane.normal));
+            float d = projRadius - projDistance;
+            if (d < 0) {
+                Vec2f mtv = new Vec2f(plane.normal).mulScalar(d);
+                pos.sub(mtv);
+                collisionResponse(plane.normal, restitution);
+            }
         }
-        /*
-        Vec2f n = new Vec2f();
-        if (pos.x < 0 + radius.x) {
-            pos.x = 0 + radius.x;
-            n.set(1, 0);
-            collisionResponse(n, restitution);
-        }
-        if (pos.x > WIDTH - 1 - radius.x) {
-            pos.x = WIDTH - 1 - radius.x;
-            n.set(-1, 0);
-            collisionResponse(n, restitution);
-        }
-        if (pos.y < 0 + radius.y) {
-            pos.y = 0 + radius.y;
-            n.set(0, 1);
-            collisionResponse(n, restitution);
-        }
-        if (pos.y > HEIGHT - 1 - radius.x) {
-            pos.y = HEIGHT - 1 - radius.x;
-            n.set(0, -1);
-            collisionResponse(n, restitution);
-        }
-        */
     }
 
     private void renderGame() {
@@ -342,14 +404,35 @@ public class rigbodysim implements KeyListener, WindowListener {
             frameBufferData[i] = 0x000000;
         }
 
+        final float arrowRadiusX = 15;
+        final float arrowRadiusY = 15;
+
         for (Plane plane: planes) {
-            Vec2f point = plane.getPoint();
-            drawRect(point.x - radius.x, point.y - radius.y, point.x + radius.x, point.y + radius.y, 0xFFFFFF);
+
+            Vec2f normal = plane.normal;
+            Vec2f startPoint = plane.getPoint();
+            Vec2f perp = new Vec2f(normal).perpendicularRight();
+            Vec2f endPoint = new Vec2f(startPoint).addMulScalar(perp, plane.len);
+            Vec2f center = new Vec2f(startPoint).addMulScalar(perp, plane.len * 0.5f);
+
+            drawLine(startPoint.x, startPoint.y, endPoint.x, endPoint.y, 0xFFFFFF);
+            drawPoint(startPoint.x, startPoint.y, 2, 0xFFFF00);
+            drawPoint(endPoint.x, endPoint.y, 2, 0xFF00FF);
+            Vec2f arrowTip = new Vec2f(center).addMulScalar(normal, 40);
+            drawLine(center.x, center.y, arrowTip.x, arrowTip.y, 0xFFFFFF);
+            drawLine(arrowTip.x, arrowTip.y, arrowTip.x + perp.x * arrowRadiusX + normal.x * -arrowRadiusY, arrowTip.y + perp.y * arrowRadiusX + normal.y * -arrowRadiusY, 0xFFFFFF);
+            drawLine(arrowTip.x, arrowTip.y, arrowTip.x + -perp.x * arrowRadiusX + normal.x * -arrowRadiusY, arrowTip.y + -perp.y * arrowRadiusX + normal.y * -arrowRadiusY, 0xFFFFFF);
+
         }
 
-        drawRect(pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y, 0xFF0000);
-        drawRect(pos.x - 2, pos.y - 2, pos.x + 2, pos.y + 2, 0xFF0000);
+        int color = 0xFF0000;
+        if (isPointInRect(mousePos.x, getY(mousePos.y), pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y)) {
+            color = 0x00FF00;
+        }
+
+        drawRect(pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y, color);
+        drawPoint(pos.x, pos.y, 2, 0xFFFFFF);
+        drawPoint(mousePos.x, getY(mousePos.y), 2, 0x0000FF);
+
     }
 }
-
-// TODO: Continue from part 16

@@ -73,6 +73,20 @@ public class Vec2f extends Object {
         return (float)Math.sqrt(lengthSqrd());
     }
 
+    public Vec2f perpendicularLeft() {
+        float tmp = x;
+        this.x = -y;
+        this.y = tmp;
+        return this;
+    }
+
+    public Vec2f perpendicularRight() {
+        float tmp = x;
+        this.x = y;
+        this.y = -tmp;
+        return this;
+    }
+
     @Override
     public String toString() {
         return String.format("(%f. %f)", x, y);
