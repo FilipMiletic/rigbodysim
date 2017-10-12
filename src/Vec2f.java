@@ -37,6 +37,12 @@ public class Vec2f extends Object {
         return this;
     }
 
+    public Vec2f sub(Vec2f v) {
+        x -= v.x;
+        y -= v.y;
+        return this;
+    }
+
     public Vec2f hadamard(Vec2f v) {
         x -= v.x;
         y -= v.y;

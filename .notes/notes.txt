@@ -1,4 +1,4 @@
-#Basic principles
+# Basic principles
 
 acceleration -> speed -> position
 
@@ -10,8 +10,7 @@ _[a] => [v] => [p]_
 
 ** Add _time_ (t) value in all the calculations **
 
-
-#Numerical analysis and integration
+# Numerical analysis and integration
 
 If we split time in differential segments, where each segment takes 16ms,
 we could take them for calculating parameters and then redner them at screen.
@@ -21,5 +20,3 @@ _and_ maintain 60fps for the simulation display on the screen.
 * delta time = will be small time sequence which we will use for calculation and rendering
 
 We will use Implicit Euler-integration
-
-

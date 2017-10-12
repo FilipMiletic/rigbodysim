@@ -6,7 +6,7 @@
   * GitHub: www.github.com/FilipMiletic
 **/
 
-import javax.swing.JFrame;
+import javax.swing.*;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -34,7 +34,7 @@ public class rigbodysim implements KeyListener, WindowListener {
 
         frame = new JFrame();
         frame.setSize(WIDTH, HEIGHT);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setTitle(TITLE);
         frame.setResizable(false);
         frame.setIgnoreRepaint(true);
