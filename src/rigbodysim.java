@@ -6,7 +6,8 @@
   * GitHub: www.github.com/FilipMiletic
 **/
 
-import javax.swing.*;
+import javax.swing.JFrame;
+import javax.swing.WindowConstants;
 
 import java.awt.Canvas;
 import java.awt.Dimension;
@@ -164,7 +165,7 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
         while (isRunning) {
             long frameStartTime = System.nanoTime();
-            
+
             updateGame(DT);
             renderGame();
 
@@ -337,25 +338,25 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
     private boolean rectDragging = false;
     private Vec2i rectDragStart = new Vec2i();
-    // TODO: FIX MOUSE DRAGGIN!!!
+
     private void updateGame(float dt) {
         boolean leftMousePressed = mouseState[1];
+
         if (!rectDragging) {
             if (isPointInRect(mousePos.x, getY(mousePos.y), pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y) && leftMousePressed) {
                 rectDragging = true;
                 rectDragStart.set(mousePos);
-            } else {
-                if (leftMousePressed) {
-                    int dx = mousePos.x - rectDragStart.x;
-                    int dy = mousePos.y - rectDragStart.y;
-                    pos.x += dx;
-                    pos.y += dy * (-1);
-                    rectDragStart.set(mousePos);
-                } else {
-                    rectDragging = false;
-                }
             }
-
+        } else {
+            if (leftMousePressed) {
+                int dx = mousePos.x - rectDragStart.x;
+                int dy = mousePos.y - rectDragStart.y;
+                pos.x += dx;
+                pos.y += dy * (-1);
+                rectDragStart.set(mousePos);
+            } else {
+                rectDragging = false;
+            }
         }
 
         acc.x = 0;

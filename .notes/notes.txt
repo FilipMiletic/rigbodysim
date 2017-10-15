@@ -19,7 +19,7 @@ _and_ maintain 60fps for the simulation display on the screen.
 
 * delta time = will be small time sequence which we will use for calculation and rendering
 
-We will use Implicit Euler-integration
+[x] We will use Implicit Euler-integration
 --------------------------------------------------------------------------------
 
 12/10/2017
@@ -28,5 +28,10 @@ We will use Implicit Euler-integration
 * Minimum Translation Vector -> MTV = n^ x d
 
 # Mouse Implementation
-* Correct mouse movement and mouse tracking via 'MouseEventListener'
-~> * Mouse rectangle dragging 
+[x] Correct mouse movement and mouse tracking via 'MouseEventListener'
+* Mouse rectangle dragging
+
+--------------------------------------------------------------------------------
+
+15/10/2017
+
