@@ -34,7 +34,6 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
         frameBuffer = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
         frameBufferData = ((DataBufferInt) frameBuffer.getRaster().getDataBuffer()).getData();
 
-
         frame = new JFrame();
         frame.setSize(WIDTH, HEIGHT);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -212,6 +211,12 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
         }
     }
 
+    private void setPixelSafe(float x, float y, int color) {
+        if (!(x < 0 || x > WIDTH - 1 || y < 0 || y > HEIGHT - 1)) {
+            setPixel((int)x, (int)y, color);
+        }
+    }
+
 
     private void drawRect(int x0, int y0, int x1, int y1, int color) {
         // Checking and defining right values for min/max as arguments
@@ -290,7 +295,43 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
         drawRect(x - radius, y - radius, x + radius, y + radius, color);
     }
 
+    private float getCircleError(float x, float y, float r) {
+        return x*x + y*y - r*r;
+    }
 
+    private void drawCircle(float cx, float cy, float radius, int color, boolean filled) {
+        float x = 0f;
+        float y = radius;
+        float f = getCircleError(1f, radius - 0.5f, radius);
+        while (x <= y) {
+            if (!filled) {
+                setPixelSafe(cx + x, cy + y, color);
+                setPixelSafe(cx + -x, cy + y, color);
+
+                setPixelSafe(cx + -x, cy + -y, color);
+                setPixelSafe(cx + x, cy + -y, color);
+
+                setPixelSafe(cx + y, cy + x, color);
+                setPixelSafe(cx + -y, cy + x, color);
+
+                setPixelSafe(cx + -y, cy + -x, color);
+                setPixelSafe(cx + y, cy + -x, color);
+            } else {
+                drawLine(cx + x, cy + y, cx + -x, cy + y, color);
+                drawLine(cx + -x, cy + - y, cx + x, cy + -y, color);
+
+                drawLine(cx + y, cy + x, cx + -y, cy + x, color);
+                drawLine(cx + -y, cy + -x, cx + y, cy + -x, color);
+            }
+            x++;
+            if (f > 0) {
+                y--;
+                f = getCircleError(x, y - 0.5f, radius);
+            } else {
+                f = getCircleError(x, y - 0.5f, radius);
+            }
+        }
+    }
 
     class Plane {
         public final Vec2f normal;
@@ -389,7 +430,6 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
             Vec2f pointOnPlane = plane.getPoint();
             Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(pos);
             float projDistance = distanceToPlane.dot(plane.normal);
-            // ~FIX: kinda fixed red box' position in coordinate system
             float projRadius =  -Math.abs(radius.dot(plane.normal));
             float d = projRadius - projDistance;
             if (d < 0) {
@@ -432,6 +472,7 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
         }
 
         drawRect(pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y, color);
+        drawCircle(pos.x, pos.y, radius.x, 0xFF00FF, false);
         drawPoint(pos.x, pos.y, 2, 0xFFFFFF);
         drawPoint(mousePos.x, getY(mousePos.y), 2, 0x0000FF);
 
