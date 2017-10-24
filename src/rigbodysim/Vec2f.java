@@ -1,3 +1,5 @@
+package rigbodysim;
+
 /**
  * Created by phil on 12/9/16.
  */
@@ -43,12 +45,6 @@ public class Vec2f extends Object {
         return this;
     }
 
-    public Vec2f hadamard(Vec2f v) {
-        x -= v.x;
-        y -= v.y;
-        return this;
-    }
-
     public Vec2f mulScalar(float s) {
         x *= s;
         y *= s;
@@ -71,6 +67,17 @@ public class Vec2f extends Object {
 
     public float length() {
         return (float)Math.sqrt(lengthSqrd());
+    }
+
+    public Vec2f normalize() {
+        float l = length();
+        if (l == 0) {
+            l = 1;
+        }
+        float invLen = 1.0f/l;
+        x *= invLen;
+        y *= invLen;
+        return this;
     }
 
     public Vec2f perpendicularLeft() {

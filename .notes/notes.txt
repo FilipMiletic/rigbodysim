@@ -12,3 +12,27 @@ Basic geometric formulas for circle:
 
 Algorithm for implementig circle with midpoint dissplacement:
 	https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
+
+--------------------------------------------------------------------------------
+
+19/10/2017 -- Contact & Collision
+--- 20
+Definining distance between objects and checking it in every game iteration.
+
+--------------------------------------------------------------------------------
+
+24/10/2017 -- Contact generation and handling
+--- 21
+Distance registering between different geometrical types
+[x] Square to line/plane
+[x] Circle to line/plane
+[ ] Circle to cirlce, happends when distance < radius
+	* distance = distance between centers of circles - radius of both circles
+		d = (A - B)/|A - B|
+		and then normalize d
+[ ] Circle to square
+	* problem of square rotation
+[ ]
+[ ]
+
+--------------------------------------------------------------------------------

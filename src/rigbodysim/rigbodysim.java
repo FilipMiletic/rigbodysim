@@ -1,10 +1,11 @@
 /**
-  * Created by Filip Miletic on 1/5/16.
-  * Personal website: 8bitphil.me
-  * You can contact me via email: filip.miletic@me.com
-  * or hit me on Twitter: www.twitter.com/@osmobitni
-  * GitHub: www.github.com/FilipMiletic
-**/
+ * Created by Filip Miletic on 1/5/16.
+ * Personal website: 8bitphil.me
+ * You can contact me via email: filip.miletic@me.com
+ * or hit me on Twitter: www.twitter.com/@osmobitni
+ * GitHub: www.github.com/FilipMiletic
+ **/
+package rigbodysim;
 
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
@@ -349,22 +350,29 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
         }
     }
 
+    private final int MAX_CONTACTS = 100;
+    private Contact[] contacts;
+    private int numOfContacs = 0;
+
     private Vec2f pos;
     private Vec2f vel;
     private Vec2f acc;
-    private Vec2f radius;
+    private float radius;
     private Plane[] planes;
 
     private void initGame() {
         pos = new Vec2f(WIDTH / 2f, HEIGHT / 2f);
         vel = new Vec2f();
         acc = new Vec2f();
-        radius = new Vec2f(50f, 50f);
+        radius = 50f;
         planes = new Plane[4];
         planes[0] = new Plane(new Vec2f(0, 1), 50, WIDTH - 1);
         planes[1] = new Plane(new Vec2f(0, -1), -(HEIGHT - 1 - 50), -(WIDTH - 1));
         planes[2] = new Plane(new Vec2f(1, 0), 50, -(HEIGHT - 1));
         planes[3] = new Plane(new Vec2f(-1, 0), -(WIDTH - 1 - 50), HEIGHT - 1);
+
+        contacts = new Contact[MAX_CONTACTS];
+        numOfContacs = 0;
     }
 
     private void collisionResponse(Vec2f n, float restitution) {
@@ -377,26 +385,33 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
         return !(x < x0 || x > x1 || y < y0 || y > y1);
     }
 
-    private boolean rectDragging = false;
-    private Vec2i rectDragStart = new Vec2i();
+    private boolean isPointInCircle(float x, float y, float cx, float cy, float radius) {
+        float dx = x - cx;
+        float dy = y - cy;
+        float lenghtSquared = dx*dx + dy*dy;
+        return lenghtSquared <= radius*radius;
+    }
+
+    private boolean dragging = false;
+    private Vec2i dragStart = new Vec2i();
 
     private void updateGame(float dt) {
         boolean leftMousePressed = mouseState[1];
 
-        if (!rectDragging) {
-            if (isPointInRect(mousePos.x, getY(mousePos.y), pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y) && leftMousePressed) {
-                rectDragging = true;
-                rectDragStart.set(mousePos);
+        if (!dragging) {
+            if (isPointInCircle(mousePos.x, getY(mousePos.y), pos.x, pos.y, radius) && leftMousePressed) {
+                dragging = true;
+                dragStart.set(mousePos);
             }
         } else {
             if (leftMousePressed) {
-                int dx = mousePos.x - rectDragStart.x;
-                int dy = mousePos.y - rectDragStart.y;
+                int dx = mousePos.x - dragStart.x;
+                int dy = mousePos.y - dragStart.y;
                 pos.x += dx;
                 pos.y += dy * (-1);
-                rectDragStart.set(mousePos);
+                dragStart.set(mousePos);
             } else {
-                rectDragging = false;
+                dragging = false;
             }
         }
 
@@ -422,22 +437,21 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
         // Explicit Euler
         vel.addMulScalar(acc, dt);
         pos.addMulScalar(vel, dt);
-
-        // Collision and reaction
-        // float restitution: Enables bouncing, coefficient
-        float restitution = 0.4f;
+        numOfContacs = 0;
+        // Contact generation
         for (Plane plane: planes) {
+            Vec2f normal = plane.normal;
             Vec2f pointOnPlane = plane.getPoint();
             Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(pos);
             float projDistance = distanceToPlane.dot(plane.normal);
-            float projRadius =  -Math.abs(radius.dot(plane.normal));
+            float projRadius = -radius;
             float d = projRadius - projDistance;
-            if (d < 0) {
-                Vec2f mtv = new Vec2f(plane.normal).mulScalar(d);
-                pos.sub(mtv);
-                collisionResponse(plane.normal, restitution);
-            }
+            Vec2f closestPointOnPlane = new Vec2f(pos).addMulScalar(normal, projDistance);
+            Contact newContact = new Contact(normal, d, closestPointOnPlane);
+            contacts[numOfContacs++] = newContact;
         }
+
+
     }
 
     private void renderGame() {
@@ -466,14 +480,19 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
         }
 
-        int color = 0xFF0000;
-        if (isPointInRect(mousePos.x, getY(mousePos.y), pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y)) {
-            color = 0x00FF00;
+        drawCircle(pos.x, pos.y, radius, 0xFF0000, true);
+        drawPoint(pos.x, pos.y, 2, 0xFFFFFF);
+
+        // TODO: Implement collision detection and contact
+        for (int i=0; i < numOfContacs; i++) {
+            Contact contact = contacts[i];
+            Vec2f normal = contact.normal;
+            Vec2f closestPointOnPlane = contact.point;
+            Vec2f closestPointOnBox = new Vec2f(closestPointOnPlane).addMulScalar(normal, contact.distance);
+            drawCircle(closestPointOnPlane.x, closestPointOnPlane.y, 4f, 0xFF00FF, true);
+            drawCircle(closestPointOnBox.x, closestPointOnBox.y, 4f, 0xFFFF00, true);
         }
 
-        drawRect(pos.x - radius.x, pos.y - radius.y, pos.x + radius.x, pos.y + radius.y, color);
-        drawCircle(pos.x, pos.y, radius.x, 0xFF00FF, false);
-        drawPoint(pos.x, pos.y, 2, 0xFFFFFF);
         drawPoint(mousePos.x, getY(mousePos.y), 2, 0x0000FF);
 
     }
