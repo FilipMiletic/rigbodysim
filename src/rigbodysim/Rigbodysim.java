@@ -7,6 +7,8 @@
  **/
 package rigbodysim;
 
+import com.sun.deploy.Environment;
+
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
 
@@ -17,7 +19,7 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 
-public class rigbodysim implements KeyListener, WindowListener, MouseListener, MouseMotionListener {
+public class Rigbodysim implements KeyListener, WindowListener, MouseListener, MouseMotionListener {
 
     private final String TITLE = "PhySim";
     private final int WIDTH = 800;
@@ -31,7 +33,7 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
     private Vec2i mousePos = new Vec2i();
 
 
-    public rigbodysim() {
+    public Rigbodysim() {
         frameBuffer = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
         frameBufferData = ((DataBufferInt) frameBuffer.getRaster().getDataBuffer()).getData();
 
@@ -59,13 +61,12 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
     }
 
     public static void main(String[] args) {
-        rigbodysim game = new rigbodysim();
-        game.run();
+        Rigbodysim base = new Rigbodysim();
+        base.run();
     }
 
     @Override
     public void keyTyped(KeyEvent e) {
-
     }
 
     @Override
@@ -84,32 +85,26 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
     @Override
     public void windowOpened(WindowEvent e) {
-
     }
 
     @Override
     public void windowClosing(WindowEvent e) {
-
     }
 
     @Override
     public void windowClosed(WindowEvent e) {
-
     }
 
     @Override
     public void windowIconified(WindowEvent e) {
-
     }
 
     @Override
     public void windowDeiconified(WindowEvent e) {
-
     }
 
     @Override
     public void windowActivated(WindowEvent e) {
-
     }
 
     @Override
@@ -131,7 +126,6 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
     @Override
     public void mouseClicked(MouseEvent e) {
-
     }
 
     @Override
@@ -334,38 +328,29 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
         }
     }
 
-    class Plane {
-        public final Vec2f normal;
-        public final float distance;
-        public final float len;
-
-        public Plane(Vec2f normal, float distance, float len) {
-            this.normal = normal;
-            this.distance = distance;
-            this.len = len;
-        }
-
-        public Vec2f getPoint() {
-            return new Vec2f(normal).mulScalar(distance);
-        }
-    }
 
     private final int MAX_CONTACTS = 100;
     private Contact[] contacts;
     private int numOfContacs = 0;
 
-    private Vec2f pos;
-    private Vec2f vel;
-    private Vec2f acc;
-    private float radius;
+    private final int MAX_CIRCLES = 10;
+    private Circle[] circles;
+    private int numCircles = 0;
+
+    private final int MAX_PLANES = 4;
     private Plane[] planes;
 
     private void initGame() {
-        pos = new Vec2f(WIDTH / 2f, HEIGHT / 2f);
-        vel = new Vec2f();
-        acc = new Vec2f();
-        radius = 50f;
-        planes = new Plane[4];
+        circles = new Circle[MAX_CIRCLES];
+        Circle circle;
+
+        circle = circles[numCircles++] = new Circle(50f, 0xFF0000);
+        circle.pos.set(circle.radius * 4f, circle.radius * 4f);
+
+        circle = circles[numCircles++] = new Circle(50f, 0x0000FF);
+        circle.pos.set(WIDTH - 1f - circle.radius * 4f, HEIGHT - 1f - circle.radius * 4f);
+
+        planes = new Plane[MAX_PLANES];
         planes[0] = new Plane(new Vec2f(0, 1), 50, WIDTH - 1);
         planes[1] = new Plane(new Vec2f(0, -1), -(HEIGHT - 1 - 50), -(WIDTH - 1));
         planes[2] = new Plane(new Vec2f(1, 0), 50, -(HEIGHT - 1));
@@ -375,11 +360,11 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
         numOfContacs = 0;
     }
 
-    private void collisionResponse(Vec2f n, float restitution) {
+    /*private void collisionResponse(Vec2f n, float restitution) {
         float projVel = vel.dot(n);
         float e = 1.0f + restitution;
         vel.addMulScalar(n, -projVel * e);
-    }
+    }*/
 
     private boolean isPointInRect(float x, float y, float x0, float y0, float x1, float y1) {
         return !(x < x0 || x > x1 || y < y0 || y > y1);
@@ -394,73 +379,116 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
     private boolean dragging = false;
     private Vec2i dragStart = new Vec2i();
+    private Circle dragCircle = null;
 
     private void updateGame(float dt) {
         boolean leftMousePressed = mouseState[1];
 
         if (!dragging) {
-            if (isPointInCircle(mousePos.x, getY(mousePos.y), pos.x, pos.y, radius) && leftMousePressed) {
-                dragging = true;
-                dragStart.set(mousePos);
+            dragCircle = null;
+            for (int i = 0; i < numCircles; i++) {
+                Circle circle = circles[i];
+                if (isPointInCircle(mousePos.x, getY(mousePos.y), circle.pos.x,circle.pos.y, circle.radius)
+                        && leftMousePressed) {
+                    dragging = true;
+                    dragStart.set(mousePos);
+                    dragCircle = circle;
+                    break;
+                }
             }
         } else {
             if (leftMousePressed) {
                 int dx = mousePos.x - dragStart.x;
                 int dy = mousePos.y - dragStart.y;
-                pos.x += dx;
-                pos.y += dy * (-1);
+                dragCircle.pos.x += dx;
+                dragCircle.pos.y += dy * (-1);
                 dragStart.set(mousePos);
             } else {
                 dragging = false;
             }
         }
 
-        acc.x = 0;
-        acc.y = 0;
+        for (int i = 0; i < numCircles; i++) {
+            Circle circle = circles[i];
 
-        if (isKeyDown(87)) {
-            // W pressed
-            acc.y += 10f / dt;
-        } else if (isKeyDown(83)) {
-            // S pressed
-            acc.y -= 10f / dt;
+            circle.acc.zero();
+
+            if (isKeyDown(87)) {
+                // W pressed
+                circle.acc.y += 10f / dt;
+            } else if (isKeyDown(83)) {
+                // S pressed
+                circle.acc.y -= 10f / dt;
+            }
+
+            if (isKeyDown(65)) {
+                // A pressed
+                circle.acc.x -= 10f / dt;
+            } else if (isKeyDown(68)) {
+                // D pressed
+                circle.acc.x += 10f / dt;
+            }
         }
 
-        if (isKeyDown(65)) {
-            // A pressed
-            acc.x -= 10f / dt;
-        } else if (isKeyDown(68)) {
-            // D pressed
-            acc.x += 10f / dt;
+        // Explicit Euler Integration
+        for (int i = 0; i < numCircles; i++) {
+            Circle circle = circles[i];
+            circle.vel.addMulScalar(circle.acc, dt);
+            circle.pos.addMulScalar(circle.vel, dt);
         }
 
-        // Explicit Euler
-        vel.addMulScalar(acc, dt);
-        pos.addMulScalar(vel, dt);
         numOfContacs = 0;
-        // Contact generation
-        for (Plane plane: planes) {
-            Vec2f normal = plane.normal;
-            Vec2f pointOnPlane = plane.getPoint();
-            Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(pos);
-            float projDistance = distanceToPlane.dot(plane.normal);
-            float projRadius = -radius;
-            float d = projRadius - projDistance;
-            Vec2f closestPointOnPlane = new Vec2f(pos).addMulScalar(normal, projDistance);
-            Contact newContact = new Contact(normal, d, closestPointOnPlane);
-            contacts[numOfContacs++] = newContact;
+        // Contact detection between line and circle
+        for (Plane planeA: planes) {
+            for (int i = 0; i < numCircles; i++) {
+                Circle circleB = circles[i];
+                Vec2f normal = planeA.normal;
+                Vec2f pointOnPlane = planeA.getPoint();
+                Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(circleB.pos);
+                float projDistance = distanceToPlane.dot(planeA.normal);
+                float projRadius = -circleB.radius;
+                float d = projRadius - projDistance;
+                Vec2f closestPointOnA = new Vec2f(circleB.pos).addMulScalar(normal, projDistance);
+                Contact newContact = new Contact(normal, d, closestPointOnA);
+                contacts[numOfContacs++] = newContact;
+            }
         }
 
+        // Contact detection between circles
+        for (int i = 0; i < numCircles; i++) {
+            Circle circleA = circles[i];
+            for (int j = 0; j < numCircles; j++) {
+                Circle circleB = circles[j];
+                if (i != j) {
+                    Vec2f distanceBetween = new Vec2f(circleB.pos).sub(circleA.pos);
+                    Vec2f normal = new Vec2f(distanceBetween).normalize();
+                    float projectionDistance = distanceBetween.dot(normal);
+                    float bothRadius = circleA.radius + circleB.radius;
+                    float d = projectionDistance - bothRadius;
+                    Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal,circleA.radius);
+                    Contact newContact = new Contact(normal, d, closestPointOnA);
+                    contacts[numOfContacs++] = newContact;
+                }
+            }
+        }
+    }
 
+    private void drawNormal(Vec2f center, Vec2f normal) {
+        final float arrowRadiusX = 5;
+        final float arrowRadiusY = 5;
+        Vec2f perp = new Vec2f(normal).perpendicularRight();
+        Vec2f arrowTip = new Vec2f(center).addMulScalar(normal, 10);
+        drawLine(center.x, center.y, arrowTip.x, arrowTip.y, 0xFFFFFF);
+        drawLine(arrowTip.x, arrowTip.y, arrowTip.x + perp.x * arrowRadiusX + normal.x * -arrowRadiusY,
+                arrowTip.y + perp.y * arrowRadiusX + normal.y * -arrowRadiusY, 0xFFFFFF);
+        drawLine(arrowTip.x, arrowTip.y, arrowTip.x + -perp.x * arrowRadiusX + normal.x * -arrowRadiusY,
+                arrowTip.y + -perp.y * arrowRadiusX + normal.y * -arrowRadiusY, 0xFFFFFF);
     }
 
     private void renderGame() {
         for (int i = 0; i < WIDTH * HEIGHT; i++) {
             frameBufferData[i] = 0x000000;
         }
-
-        final float arrowRadiusX = 15;
-        final float arrowRadiusY = 15;
 
         for (Plane plane: planes) {
 
@@ -469,21 +497,18 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
             Vec2f perp = new Vec2f(normal).perpendicularRight();
             Vec2f endPoint = new Vec2f(startPoint).addMulScalar(perp, plane.len);
             Vec2f center = new Vec2f(startPoint).addMulScalar(perp, plane.len * 0.5f);
-
             drawLine(startPoint.x, startPoint.y, endPoint.x, endPoint.y, 0xFFFFFF);
             drawPoint(startPoint.x, startPoint.y, 2, 0xFFFF00);
             drawPoint(endPoint.x, endPoint.y, 2, 0xFF00FF);
-            Vec2f arrowTip = new Vec2f(center).addMulScalar(normal, 40);
-            drawLine(center.x, center.y, arrowTip.x, arrowTip.y, 0xFFFFFF);
-            drawLine(arrowTip.x, arrowTip.y, arrowTip.x + perp.x * arrowRadiusX + normal.x * -arrowRadiusY, arrowTip.y + perp.y * arrowRadiusX + normal.y * -arrowRadiusY, 0xFFFFFF);
-            drawLine(arrowTip.x, arrowTip.y, arrowTip.x + -perp.x * arrowRadiusX + normal.x * -arrowRadiusY, arrowTip.y + -perp.y * arrowRadiusX + normal.y * -arrowRadiusY, 0xFFFFFF);
-
+            drawNormal(center, normal);
         }
 
-        drawCircle(pos.x, pos.y, radius, 0xFF0000, true);
-        drawPoint(pos.x, pos.y, 2, 0xFFFFFF);
+        for (int i = 0; i < numCircles; i++) {
+            Circle circle = circles[i];
+            drawCircle(circle.pos.x, circle.pos.y, circle.radius, circle.color, false);
+            drawPoint(circle.pos.x, circle.pos.y, 2, 0xFFFFFF);
+        }
 
-        // TODO: Implement collision detection and contact
         for (int i=0; i < numOfContacs; i++) {
             Contact contact = contacts[i];
             Vec2f normal = contact.normal;
@@ -491,9 +516,14 @@ public class rigbodysim implements KeyListener, WindowListener, MouseListener, M
             Vec2f closestPointOnBox = new Vec2f(closestPointOnPlane).addMulScalar(normal, contact.distance);
             drawCircle(closestPointOnPlane.x, closestPointOnPlane.y, 4f, 0xFF00FF, true);
             drawCircle(closestPointOnBox.x, closestPointOnBox.y, 4f, 0xFFFF00, true);
+            drawNormal(closestPointOnPlane, normal);
+
+
+            //drawCircle(closestPointOnBox.x, closestPointOnBox.y, 4f, 0xFFFF00, true);
         }
 
         drawPoint(mousePos.x, getY(mousePos.y), 2, 0x0000FF);
+
 
     }
 }
