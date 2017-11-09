@@ -1,9 +1,7 @@
 package rigbodysim;
 
-public class Circle {
-    public final Vec2f pos = new Vec2f();
-    public final Vec2f vel = new Vec2f();
-    public final Vec2f acc = new Vec2f();
+public class Circle extends Body {
+
     public float radius;
     public int color;
 

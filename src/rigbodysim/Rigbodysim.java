@@ -7,8 +7,6 @@
  **/
 package rigbodysim;
 
-import com.sun.deploy.Environment;
-
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
 
@@ -329,25 +327,31 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     }
 
 
-    private final int MAX_CONTACTS = 100;
-    private Contact[] contacts;
-    private int numOfContacs = 0;
+    private final int MAX_PLANES = 4;
+    private Plane[] planes;
 
     private final int MAX_CIRCLES = 10;
     private Circle[] circles;
-    private int numCircles = 0;
+    private int numOfCircles = 0;
 
-    private final int MAX_PLANES = 4;
-    private Plane[] planes;
+    // [working on it] TODO: Implement body and let every other shape inherit it's attributes. Half way there...
+    private final int MAX_BODIES = 100;
+    private Body[] bodies;
+
+
+    private final int MAX_CONTACTS = 100;
+    private Contact[] contacts;
+    private int numOfContacs;
+
 
     private void initGame() {
         circles = new Circle[MAX_CIRCLES];
         Circle circle;
 
-        circle = circles[numCircles++] = new Circle(50f, 0xFF0000);
+        circle = circles[numOfCircles++] = new Circle(50f, 0xFF0000);
         circle.pos.set(circle.radius * 4f, circle.radius * 4f);
 
-        circle = circles[numCircles++] = new Circle(50f, 0x0000FF);
+        circle = circles[numOfCircles++] = new Circle(50f, 0x0000FF);
         circle.pos.set(WIDTH - 1f - circle.radius * 4f, HEIGHT - 1f - circle.radius * 4f);
 
         planes = new Plane[MAX_PLANES];
@@ -377,8 +381,8 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         return lenghtSquared <= radius*radius;
     }
 
-    private boolean dragging = false;
-    private Vec2i dragStart = new Vec2i();
+    private boolean  dragging = false;
+    private Vec2i   dragStart = new Vec2i();
     private Circle dragCircle = null;
 
     private void updateGame(float dt) {
@@ -386,11 +390,11 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
         if (!dragging) {
             dragCircle = null;
-            for (int i = 0; i < numCircles; i++) {
+            for (int i = 0; i < numOfCircles; i++) {
                 Circle circle = circles[i];
                 if (isPointInCircle(mousePos.x, getY(mousePos.y), circle.pos.x,circle.pos.y, circle.radius)
                         && leftMousePressed) {
-                    dragging = true;
+                    dragging   = true;
                     dragStart.set(mousePos);
                     dragCircle = circle;
                     break;
@@ -400,19 +404,17 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             if (leftMousePressed) {
                 int dx = mousePos.x - dragStart.x;
                 int dy = mousePos.y - dragStart.y;
-                dragCircle.pos.x += dx;
-                dragCircle.pos.y += dy * (-1);
+                dragCircle.vel.x += dx;
+                dragCircle.vel.y += dy * (-1);
                 dragStart.set(mousePos);
             } else {
                 dragging = false;
             }
         }
 
-        for (int i = 0; i < numCircles; i++) {
+        for (int i = 0; i < numOfCircles; i++) {
             Circle circle = circles[i];
-
             circle.acc.zero();
-
             if (isKeyDown(87)) {
                 // W pressed
                 circle.acc.y += 10f / dt;
@@ -420,7 +422,6 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
                 // S pressed
                 circle.acc.y -= 10f / dt;
             }
-
             if (isKeyDown(65)) {
                 // A pressed
                 circle.acc.x -= 10f / dt;
@@ -431,53 +432,98 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         }
 
         // Explicit Euler Integration
-        for (int i = 0; i < numCircles; i++) {
+        for (int i = 0; i < numOfCircles; i++) {
             Circle circle = circles[i];
             circle.vel.addMulScalar(circle.acc, dt);
-            circle.pos.addMulScalar(circle.vel, dt);
         }
 
         numOfContacs = 0;
         // Contact detection between line and circle
         for (Plane planeA: planes) {
-            for (int i = 0; i < numCircles; i++) {
+            for (int i = 0; i < numOfCircles; i++) {
                 Circle circleB = circles[i];
-                Vec2f normal = planeA.normal;
-                Vec2f pointOnPlane = planeA.getPoint();
+                Vec2f normal   = planeA.normal;
+                Vec2f pointOnPlane    = planeA.getPoint();
                 Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(circleB.pos);
+
                 float projDistance = distanceToPlane.dot(planeA.normal);
-                float projRadius = -circleB.radius;
+                float projRadius   = -circleB.radius;
                 float d = projRadius - projDistance;
+
                 Vec2f closestPointOnA = new Vec2f(circleB.pos).addMulScalar(normal, projDistance);
-                Contact newContact = new Contact(normal, d, closestPointOnA);
+                Contact newContact    = new Contact(normal, d, closestPointOnA, planeA, circleB);
                 contacts[numOfContacs++] = newContact;
             }
         }
 
         // Contact detection between circles
-        for (int i = 0; i < numCircles; i++) {
+        for (int i = 0; i < numOfCircles; i++) {
             Circle circleA = circles[i];
-            for (int j = 0; j < numCircles; j++) {
+            for (int j = 0; j < numOfCircles; j++) {
                 Circle circleB = circles[j];
                 if (i != j) {
                     Vec2f distanceBetween = new Vec2f(circleB.pos).sub(circleA.pos);
                     Vec2f normal = new Vec2f(distanceBetween).normalize();
+
                     float projectionDistance = distanceBetween.dot(normal);
-                    float bothRadius = circleA.radius + circleB.radius;
+                    float bothRadius         = circleA.radius + circleB.radius;
+
                     float d = projectionDistance - bothRadius;
                     Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal,circleA.radius);
-                    Contact newContact = new Contact(normal, d, closestPointOnA);
+                    Contact newContact    = new Contact(normal, d, closestPointOnA, circleA, circleB);
                     contacts[numOfContacs++] = newContact;
                 }
             }
         }
+
+        // [due tomorrow (24)] TODO: Implement some kind of traction throught the air that will gradually increment traction/invMass
+        // Contact
+        final float restitution = 0.5f;
+        for (int i = 0; i < numOfContacs; i++) {
+            Contact contact = contacts[i];
+            boolean isPenetration = contact.distance < 0;
+            if (isPenetration) {
+                Vec2f normal = contact.normal;
+                Body bodyA   = contact.bodyA;
+                Body bodyB   = contact.bodyB;
+
+                Vec2f vA  = bodyA.vel;
+                Vec2f vB  = bodyB.vel;
+                Vec2f vAB = new Vec2f(vB).sub(vA);
+
+                float inverseMassA = 0f;
+                float inverseMassB = 1f;
+                if (bodyA instanceof Circle && bodyB instanceof Circle) {
+                    inverseMassA = 0.5f;
+                    inverseMassB = 0.5f;
+                }
+
+                float   projRelVel = vAB.dot(normal);
+                boolean movingTowards = projRelVel < 0;
+                if (movingTowards) {
+                    float e = 1.0f + restitution;
+                    vA.addMulScalar(normal,  projRelVel * e * inverseMassA);
+                    vB.addMulScalar(normal, -projRelVel * e * inverseMassB);
+                }
+            }
+//            float projVel = vel.dot(normal);
+//            float e = 1.0f + projVel;
+//            vel.addMultScalar(n, -projVel * e);
+        }
+
+        for (int i = 0; i < numOfCircles; i++) {
+            Circle circle = circles[i];
+            circle.vel.addMulScalar(circle.acc, dt);
+            circle.pos.addMulScalar(circle.vel, dt);
+        }
+
     }
 
     private void drawNormal(Vec2f center, Vec2f normal) {
-        final float arrowRadiusX = 5;
-        final float arrowRadiusY = 5;
+        final float arrowRadiusX = 8;
+        final float arrowRadiusY = 8;
         Vec2f perp = new Vec2f(normal).perpendicularRight();
-        Vec2f arrowTip = new Vec2f(center).addMulScalar(normal, 10);
+        Vec2f arrowTip = new Vec2f(center).addMulScalar(normal, 15);
         drawLine(center.x, center.y, arrowTip.x, arrowTip.y, 0xFFFFFF);
         drawLine(arrowTip.x, arrowTip.y, arrowTip.x + perp.x * arrowRadiusX + normal.x * -arrowRadiusY,
                 arrowTip.y + perp.y * arrowRadiusX + normal.y * -arrowRadiusY, 0xFFFFFF);
@@ -503,7 +549,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             drawNormal(center, normal);
         }
 
-        for (int i = 0; i < numCircles; i++) {
+        for (int i = 0; i < numOfCircles; i++) {
             Circle circle = circles[i];
             drawCircle(circle.pos.x, circle.pos.y, circle.radius, circle.color, false);
             drawPoint(circle.pos.x, circle.pos.y, 2, 0xFFFFFF);

@@ -1,6 +1,6 @@
 package rigbodysim;
 
-public class Plane {
+public class Plane extends Body {
     public final Vec2f normal;
     public final float distance;
     public final float len;
