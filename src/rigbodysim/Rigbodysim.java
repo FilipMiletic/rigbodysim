@@ -330,29 +330,17 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     private final int MAX_PLANES = 4;
     private Plane[] planes;
 
-    private final int MAX_CIRCLES = 10;
+    private final int MAX_CIRCLES = 1000;
     private Circle[] circles;
     private int numOfCircles = 0;
 
-    // [working on it] TODO: Implement body and let every other shape inherit it's attributes. Half way there...
-    private final int MAX_BODIES = 100;
-    private Body[] bodies;
-
-
-    private final int MAX_CONTACTS = 100;
+    private final int MAX_CONTACTS = 10000;
     private Contact[] contacts;
     private int numOfContacs;
 
 
     private void initGame() {
         circles = new Circle[MAX_CIRCLES];
-        Circle circle;
-
-        circle = circles[numOfCircles++] = new Circle(50f, 0xFF0000);
-        circle.pos.set(circle.radius * 4f, circle.radius * 4f);
-
-        circle = circles[numOfCircles++] = new Circle(50f, 0x0000FF);
-        circle.pos.set(WIDTH - 1f - circle.radius * 4f, HEIGHT - 1f - circle.radius * 4f);
 
         planes = new Plane[MAX_PLANES];
         planes[0] = new Plane(new Vec2f(0, 1), 50, WIDTH - 1);
@@ -364,15 +352,6 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         numOfContacs = 0;
     }
 
-    /*private void collisionResponse(Vec2f n, float restitution) {
-        float projVel = vel.dot(n);
-        float e = 1.0f + restitution;
-        vel.addMulScalar(n, -projVel * e);
-    }*/
-
-    private boolean isPointInRect(float x, float y, float x0, float y0, float x1, float y1) {
-        return !(x < x0 || x > x1 || y < y0 || y > y1);
-    }
 
     private boolean isPointInCircle(float x, float y, float cx, float cy, float radius) {
         float dx = x - cx;
@@ -389,15 +368,21 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         boolean leftMousePressed = mouseState[1];
 
         if (!dragging) {
-            dragCircle = null;
-            for (int i = 0; i < numOfCircles; i++) {
-                Circle circle = circles[i];
-                if (isPointInCircle(mousePos.x, getY(mousePos.y), circle.pos.x,circle.pos.y, circle.radius)
-                        && leftMousePressed) {
-                    dragging   = true;
-                    dragStart.set(mousePos);
-                    dragCircle = circle;
-                    break;
+            if (leftMousePressed) {
+                dragCircle = null;
+                for (int i = 0; i < numOfCircles; i++) {
+                    Circle circle = circles[i];
+                    if (isPointInCircle(mousePos.x, getY(mousePos.y), circle.pos.x, circle.pos.y, circle.radius)) {
+                        dragging = true;
+                        dragStart.set(mousePos);
+                        dragCircle = circle;
+                        break;
+                    }
+                }
+                if (dragCircle == null) {
+                    Circle circle;
+                    circle = circles[numOfCircles++] = new Circle(10f, 0xFF00FF);
+                    circle.pos.set(mousePos.x, getY(mousePos.y));
                 }
             }
         } else {
@@ -449,66 +434,55 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
                 float projDistance = distanceToPlane.dot(planeA.normal);
                 float projRadius   = -circleB.radius;
                 float d = projRadius - projDistance;
-
-                Vec2f closestPointOnA = new Vec2f(circleB.pos).addMulScalar(normal, projDistance);
-                Contact newContact    = new Contact(normal, d, closestPointOnA, planeA, circleB);
-                contacts[numOfContacs++] = newContact;
+                if (d < 0) {
+                    Vec2f closestPointOnA = new Vec2f(circleB.pos).addMulScalar(normal, projDistance);
+                    Contact newContact = new Contact(normal, d, closestPointOnA, planeA, circleB);
+                    contacts[numOfContacs++] = newContact;
+                }
             }
         }
 
         // Contact detection between circles
         for (int i = 0; i < numOfCircles; i++) {
             Circle circleA = circles[i];
-            for (int j = 0; j < numOfCircles; j++) {
+            for (int j = i + 1; j < numOfCircles; j++) {
                 Circle circleB = circles[j];
-                if (i != j) {
-                    Vec2f distanceBetween = new Vec2f(circleB.pos).sub(circleA.pos);
-                    Vec2f normal = new Vec2f(distanceBetween).normalize();
+                Vec2f distanceBetween = new Vec2f(circleB.pos).sub(circleA.pos);
+                Vec2f normal = new Vec2f(distanceBetween).normalize();
 
-                    float projectionDistance = distanceBetween.dot(normal);
-                    float bothRadius         = circleA.radius + circleB.radius;
-
-                    float d = projectionDistance - bothRadius;
-                    Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal,circleA.radius);
-                    Contact newContact    = new Contact(normal, d, closestPointOnA, circleA, circleB);
+                float projectionDistance = distanceBetween.dot(normal);
+                float bothRadius         = circleA.radius + circleB.radius;
+                float d = projectionDistance - bothRadius;
+                if (d < 0) {
+                    Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal, circleA.radius);
+                    Contact newContact = new Contact(normal, d, closestPointOnA, circleA, circleB);
                     contacts[numOfContacs++] = newContact;
                 }
             }
         }
 
-        // [due tomorrow (24)] TODO: Implement some kind of traction throught the air that will gradually increment traction/invMass
+        // [due tomorrow (24)] TODO: Implement some kind of traction throught the air that will gradually increment traction/impulseWeight
         // Contact
-        final float restitution = 0.5f;
+        final float restitution = 1.0f;
         for (int i = 0; i < numOfContacs; i++) {
             Contact contact = contacts[i];
-            boolean isPenetration = contact.distance < 0;
-            if (isPenetration) {
-                Vec2f normal = contact.normal;
-                Body bodyA   = contact.bodyA;
-                Body bodyB   = contact.bodyB;
+            Vec2f normal = contact.normal;
+            Body bodyA   = contact.bodyA;
+            Body bodyB   = contact.bodyB;
+            Vec2f vA  = bodyA.vel;
+            Vec2f vB  = bodyB.vel;
+            Vec2f vAB = new Vec2f(vB).sub(vA);
+            float impulseWeightA = bodyA.impulseWeight;
+            float impulseWeightB = bodyB.impulseWeight;
+            float impulseRatio = 1.0f / (impulseWeightA + impulseWeightB);
+            float   projRelVel = vAB.dot(normal);
 
-                Vec2f vA  = bodyA.vel;
-                Vec2f vB  = bodyB.vel;
-                Vec2f vAB = new Vec2f(vB).sub(vA);
-
-                float inverseMassA = 0f;
-                float inverseMassB = 1f;
-                if (bodyA instanceof Circle && bodyB instanceof Circle) {
-                    inverseMassA = 0.5f;
-                    inverseMassB = 0.5f;
-                }
-
-                float   projRelVel = vAB.dot(normal);
-                boolean movingTowards = projRelVel < 0;
-                if (movingTowards) {
-                    float e = 1.0f + restitution;
-                    vA.addMulScalar(normal,  projRelVel * e * inverseMassA);
-                    vB.addMulScalar(normal, -projRelVel * e * inverseMassB);
-                }
+            if (projRelVel < 0) {
+                float e = 1.0f + restitution;
+                float impulse = (projRelVel) * e * impulseRatio;
+                vA.addMulScalar(normal,  impulse * impulseWeightA);
+                vB.addMulScalar(normal, -impulse * impulseWeightB);
             }
-//            float projVel = vel.dot(normal);
-//            float e = 1.0f + projVel;
-//            vel.addMultScalar(n, -projVel * e);
         }
 
         for (int i = 0; i < numOfCircles; i++) {
