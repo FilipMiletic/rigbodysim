@@ -254,7 +254,6 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         dx = Math.abs(dx);
         dy = Math.abs(dy);
 
-
         if (dx > dy) {
             int err = dx / 2;
             int y = 0;
@@ -326,7 +325,6 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         }
     }
 
-
     private final int MAX_PLANES = 4;
     private Plane[] planes;
 
@@ -352,7 +350,6 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         numOfContacs = 0;
     }
 
-
     private boolean isPointInCircle(float x, float y, float cx, float cy, float radius) {
         float dx = x - cx;
         float dy = y - cy;
@@ -363,6 +360,9 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     private boolean  dragging = false;
     private Vec2i   dragStart = new Vec2i();
     private Circle dragCircle = null;
+
+    // Flag that enables contac detection drawing
+    private boolean showContacs = true;
 
     private void updateGame(float dt) {
         boolean leftMousePressed = mouseState[1];
@@ -381,7 +381,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
                 }
                 if (dragCircle == null) {
                     Circle circle;
-                    circle = circles[numOfCircles++] = new Circle(10f, 0xFF00FF);
+                    circle = circles[numOfCircles++] = new Circle(30f, 0xFF00FF);
                     circle.pos.set(mousePos.x, getY(mousePos.y));
                 }
             }
@@ -399,7 +399,10 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
         for (int i = 0; i < numOfCircles; i++) {
             Circle circle = circles[i];
-            circle.acc.zero();
+
+            // Freefall on creation
+            circle.acc.set(0, -10f / dt);
+
             if (isKeyDown(87)) {
                 // W pressed
                 circle.acc.y += 10f / dt;
@@ -407,6 +410,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
                 // S pressed
                 circle.acc.y -= 10f / dt;
             }
+
             if (isKeyDown(65)) {
                 // A pressed
                 circle.acc.x -= 10f / dt;
@@ -461,36 +465,51 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             }
         }
 
-        // [due tomorrow (24)] TODO: Implement some kind of traction throught the air that will gradually increment traction/impulseWeight
         // Contact
-        final float restitution = 1.0f;
+        final int velocitySolverIterations = 100;
+        final float restitution = 0.0f;
+        for (int j = 0; j < velocitySolverIterations; j++) {
+            for (int i = 0; i < numOfContacs; i++) {
+                Contact contact = contacts[i];
+                Vec2f normal = contact.normal;
+                Body bodyA = contact.bodyA;
+                Body bodyB = contact.bodyB;
+                Vec2f vA = bodyA.vel;
+                Vec2f vB = bodyB.vel;
+                Vec2f vAB = new Vec2f(vB).sub(vA);
+                float impulseWeightA = bodyA.impulseWeight;
+                float impulseWeightB = bodyB.impulseWeight;
+                float impulseRatio = 1.0f / (impulseWeightA + impulseWeightB);
+                float projRelVel = vAB.dot(normal);
+
+                if (projRelVel < 0) {
+                    float e = 1.0f + restitution;
+                    float impulse = (projRelVel) * e * impulseRatio;
+                    vA.addMulScalar(normal, impulse * impulseWeightA);
+                    vB.addMulScalar(normal, -impulse * impulseWeightB);
+                }
+            }
+        }
+        for (int i = 0; i < numOfCircles; i++) {
+            Circle circle = circles[i];
+            circle.pos.addMulScalar(circle.vel, dt);
+        }
+
+        // Check for correct position
+        final float minDistance = 0.01f;
+        final float maxCorrection = 0.5f;
         for (int i = 0; i < numOfContacs; i++) {
             Contact contact = contacts[i];
             Vec2f normal = contact.normal;
             Body bodyA   = contact.bodyA;
             Body bodyB   = contact.bodyB;
-            Vec2f vA  = bodyA.vel;
-            Vec2f vB  = bodyB.vel;
-            Vec2f vAB = new Vec2f(vB).sub(vA);
             float impulseWeightA = bodyA.impulseWeight;
             float impulseWeightB = bodyB.impulseWeight;
             float impulseRatio = 1.0f / (impulseWeightA + impulseWeightB);
-            float   projRelVel = vAB.dot(normal);
-
-            if (projRelVel < 0) {
-                float e = 1.0f + restitution;
-                float impulse = (projRelVel) * e * impulseRatio;
-                vA.addMulScalar(normal,  impulse * impulseWeightA);
-                vB.addMulScalar(normal, -impulse * impulseWeightB);
-            }
+            float correction = (contact.distance + minDistance) * maxCorrection * impulseRatio;
+            bodyA.pos.addMulScalar(normal, correction * impulseWeightA);
+            bodyB.pos.addMulScalar(normal, -correction * impulseWeightB);
         }
-
-        for (int i = 0; i < numOfCircles; i++) {
-            Circle circle = circles[i];
-            circle.vel.addMulScalar(circle.acc, dt);
-            circle.pos.addMulScalar(circle.vel, dt);
-        }
-
     }
 
     private void drawNormal(Vec2f center, Vec2f normal) {
@@ -529,19 +548,17 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             drawPoint(circle.pos.x, circle.pos.y, 2, 0xFFFFFF);
         }
 
-        for (int i=0; i < numOfContacs; i++) {
-            Contact contact = contacts[i];
-            Vec2f normal = contact.normal;
-            Vec2f closestPointOnPlane = contact.point;
-            Vec2f closestPointOnBox = new Vec2f(closestPointOnPlane).addMulScalar(normal, contact.distance);
-            drawCircle(closestPointOnPlane.x, closestPointOnPlane.y, 4f, 0xFF00FF, true);
-            drawCircle(closestPointOnBox.x, closestPointOnBox.y, 4f, 0xFFFF00, true);
-            drawNormal(closestPointOnPlane, normal);
-
-
-            //drawCircle(closestPointOnBox.x, closestPointOnBox.y, 4f, 0xFFFF00, true);
+        if (showContacs) {
+            for (int i = 0; i < numOfContacs; i++) {
+                Contact contact = contacts[i];
+                Vec2f normal = contact.normal;
+                Vec2f closestPointOnPlane = contact.point;
+                Vec2f closestPointOnBox = new Vec2f(closestPointOnPlane).addMulScalar(normal, contact.distance);
+                drawCircle(closestPointOnPlane.x, closestPointOnPlane.y, 4f, 0xFF00FF, true);
+                drawCircle(closestPointOnBox.x, closestPointOnBox.y, 4f, 0xFFFF00, true);
+                drawNormal(closestPointOnPlane, normal);
+            }
         }
-
         drawPoint(mousePos.x, getY(mousePos.y), 2, 0x0000FF);
 
 
