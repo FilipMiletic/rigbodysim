@@ -150,7 +150,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         final long TARGET_FPS = 60;
         final long NANO_SECOND = 1000000000;
         final long NANO_SECONDS_FPS = NANO_SECOND / TARGET_FPS;
-        final float DT = 1.0f / (float)TARGET_FPS;
+        final float DT = 1.0f / (float) TARGET_FPS;
         long startFPSTime = System.currentTimeMillis();
         int numFrames = 0;
         boolean isRunning = true;
@@ -194,8 +194,8 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     }
 
     private void setPixel(int x, int y, int color) {
-            int index = getY(y) * WIDTH + x;
-            frameBufferData[index] = color;
+        int index = getY(y) * WIDTH + x;
+        frameBufferData[index] = color;
     }
 
     private void setPixelSafe(int x, int y, int color) {
@@ -206,7 +206,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
     private void setPixelSafe(float x, float y, int color) {
         if (!(x < 0 || x > WIDTH - 1 || y < 0 || y > HEIGHT - 1)) {
-            setPixel((int)x, (int)y, color);
+            setPixel((int) x, (int) y, color);
         }
     }
 
@@ -236,7 +236,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     }
 
     private void drawRect(float x0, float y0, float x1, float y1, int color) {
-        drawRect((int)x0, (int)y0, (int)x1, (int)y1, color);
+        drawRect((int) x0, (int) y0, (int) x1, (int) y1, color);
     }
 
     private void drawLine(int x0, int y0, int x1, int y1, int color) {
@@ -280,7 +280,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     }
 
     private void drawLine(float x0, float y0, float x1, float y1, int color) {
-        drawLine((int)x0, (int)y0, (int)x1, (int)y1, color);
+        drawLine((int) x0, (int) y0, (int) x1, (int) y1, color);
     }
 
     private void drawPoint(float x, float y, float radius, int color) {
@@ -288,7 +288,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     }
 
     private float getCircleError(float x, float y, float r) {
-        return x*x + y*y - r*r;
+        return x * x + y * y - r * r;
     }
 
     private void drawCircle(float cx, float cy, float radius, int color, boolean filled) {
@@ -310,7 +310,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
                 setPixelSafe(cx + y, cy + -x, color);
             } else {
                 drawLine(cx + x, cy + y, cx + -x, cy + y, color);
-                drawLine(cx + -x, cy + - y, cx + x, cy + -y, color);
+                drawLine(cx + -x, cy + -y, cx + x, cy + -y, color);
 
                 drawLine(cx + y, cy + x, cx + -y, cy + x, color);
                 drawLine(cx + -y, cy + -x, cx + y, cy + -x, color);
@@ -334,7 +334,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
     private final int MAX_CONTACTS = 10000;
     private Contact[] contacts;
-    private int numOfContacs;
+    private int numOfContacts;
 
 
     private void initGame() {
@@ -347,22 +347,22 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         planes[3] = new Plane(new Vec2f(-1, 0), -(WIDTH - 1 - 50), HEIGHT - 1);
 
         contacts = new Contact[MAX_CONTACTS];
-        numOfContacs = 0;
+        numOfContacts = 0;
     }
 
     private boolean isPointInCircle(float x, float y, float cx, float cy, float radius) {
         float dx = x - cx;
         float dy = y - cy;
-        float lenghtSquared = dx*dx + dy*dy;
-        return lenghtSquared <= radius*radius;
+        float lengthSquared = dx * dx + dy * dy;
+        return lengthSquared <= radius * radius;
     }
 
-    private boolean  dragging = false;
-    private Vec2i   dragStart = new Vec2i();
+    private boolean dragging = false;
+    private Vec2i dragStart = new Vec2i();
     private Circle dragCircle = null;
 
-    // Flag that enables contac detection drawing
-    private boolean showContacs = true;
+    // Flag that enables contact detection drawing
+    private boolean showContacts = true;
 
     private void updateGame(float dt) {
         boolean leftMousePressed = mouseState[1];
@@ -400,7 +400,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         for (int i = 0; i < numOfCircles; i++) {
             Circle circle = circles[i];
 
-            // Freefall on creation
+            // Free fall on creation
             circle.acc.set(0, -10f / dt);
 
             if (isKeyDown(87)) {
@@ -426,22 +426,22 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             circle.vel.addMulScalar(circle.acc, dt);
         }
 
-        numOfContacs = 0;
+        numOfContacts = 0;
         // Contact detection between line and circle
-        for (Plane planeA: planes) {
+        for (Plane planeA : planes) {
             for (int i = 0; i < numOfCircles; i++) {
                 Circle circleB = circles[i];
-                Vec2f normal   = planeA.normal;
-                Vec2f pointOnPlane    = planeA.getPoint();
+                Vec2f normal = planeA.normal;
+                Vec2f pointOnPlane = planeA.getPoint();
                 Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(circleB.pos);
 
                 float projDistance = distanceToPlane.dot(planeA.normal);
-                float projRadius   = -circleB.radius;
+                float projRadius = -circleB.radius;
                 float d = projRadius - projDistance;
                 if (d < 0) {
                     Vec2f closestPointOnA = new Vec2f(circleB.pos).addMulScalar(normal, projDistance);
                     Contact newContact = new Contact(normal, d, closestPointOnA, planeA, circleB);
-                    contacts[numOfContacs++] = newContact;
+                    contacts[numOfContacts++] = newContact;
                 }
             }
         }
@@ -455,12 +455,12 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
                 Vec2f normal = new Vec2f(distanceBetween).normalize();
 
                 float projectionDistance = distanceBetween.dot(normal);
-                float bothRadius         = circleA.radius + circleB.radius;
+                float bothRadius = circleA.radius + circleB.radius;
                 float d = projectionDistance - bothRadius;
                 if (d < 0) {
                     Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal, circleA.radius);
                     Contact newContact = new Contact(normal, d, closestPointOnA, circleA, circleB);
-                    contacts[numOfContacs++] = newContact;
+                    contacts[numOfContacts++] = newContact;
                 }
             }
         }
@@ -469,7 +469,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         final int velocitySolverIterations = 100;
         final float restitution = 0.0f;
         for (int j = 0; j < velocitySolverIterations; j++) {
-            for (int i = 0; i < numOfContacs; i++) {
+            for (int i = 0; i < numOfContacts; i++) {
                 Contact contact = contacts[i];
                 Vec2f normal = contact.normal;
                 Body bodyA = contact.bodyA;
@@ -498,11 +498,11 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         // Check for correct position
         final float minDistance = 0.01f;
         final float maxCorrection = 0.5f;
-        for (int i = 0; i < numOfContacs; i++) {
+        for (int i = 0; i < numOfContacts; i++) {
             Contact contact = contacts[i];
             Vec2f normal = contact.normal;
-            Body bodyA   = contact.bodyA;
-            Body bodyB   = contact.bodyB;
+            Body bodyA = contact.bodyA;
+            Body bodyB = contact.bodyB;
             float impulseWeightA = bodyA.impulseWeight;
             float impulseWeightB = bodyB.impulseWeight;
             float impulseRatio = 1.0f / (impulseWeightA + impulseWeightB);
@@ -529,7 +529,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             frameBufferData[i] = 0x000000;
         }
 
-        for (Plane plane: planes) {
+        for (Plane plane : planes) {
 
             Vec2f normal = plane.normal;
             Vec2f startPoint = plane.getPoint();
@@ -548,8 +548,8 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             drawPoint(circle.pos.x, circle.pos.y, 2, 0xFFFFFF);
         }
 
-        if (showContacs) {
-            for (int i = 0; i < numOfContacs; i++) {
+        if (showContacts) {
+            for (int i = 0; i < numOfContacts; i++) {
                 Contact contact = contacts[i];
                 Vec2f normal = contact.normal;
                 Vec2f closestPointOnPlane = contact.point;
