@@ -338,7 +338,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     private int numOfContacts;
 
             /* TODO(tomorrow): Write this down in your BLACK notebook!
-           TODO(DUE date): Refresh design patterns!
+               TODO(DUE date): Refresh design patterns!
                  -------------------------------------         -------------------         -------------------
                 |                Body                 | ----> |  Geometric Shape  | ----> | Physical Material |
                  -------------------------------------         -------------------         -------------------
