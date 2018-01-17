@@ -1,6 +1,8 @@
 package rigbodysim.physics;
 
 import rigbodysim.math.Vec2f;
+import rigbodysim.physics.contact.Contact;
+import rigbodysim.physics.contact.ContactGeneratorFactory;
 
 public class Physics {
 
@@ -12,11 +14,16 @@ public class Physics {
     public final Contact[] contacts;
     public int numOfContacts;
 
+    private final ContactGeneratorFactory contactGenFactory;
+
     public Physics() {
         numOfBodies = 0;
         bodies = new Body[MAX_BODIES];
+
         contacts = new Contact[MAX_CONTACTS];
         numOfContacts = 0;
+
+        contactGenFactory = new ContactGeneratorFactory();
     }
 
     public Physics addBody(Body body) {
@@ -43,7 +50,7 @@ public class Physics {
         }
 
         numOfContacts = 0;
-        // Contact detection between line and circle
+        // Contact detection between plane and circle
         for (int i = 0; i < numOfBodies; i++) {
             Body bodyA = bodies[i];
             if (bodyA instanceof Plane) {
@@ -51,18 +58,20 @@ public class Physics {
                 for (int j = i+1; j < numOfBodies; j++) {
                     Body bodyB = bodies[j];
                     if (bodyB instanceof Circle) {
-                        Circle circleB = (Circle) bodyB;
-                        Vec2f normal = planeA.normal;
-                        Vec2f pointOnPlane = planeA.getPoint();
-                        Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(circleB.pos);
-                        float projDistance = distanceToPlane.dot(planeA.normal);
-                        float projRadius = -circleB.radius;
-                        float d = projRadius - projDistance;
-                        if (d < 0) {
-                            Vec2f closestPointOnA = new Vec2f(circleB.pos).addMulScalar(normal, projDistance);
-                            Contact newContact = new Contact(normal, d, closestPointOnA, planeA, circleB);
-                            contacts[numOfContacts++] = newContact;
-                        }
+                        int newContacts = contactGenFactory.generate(bodyA, bodyB, numOfContacts, contacts);
+                        numOfContacts += newContacts;
+//                        Circle circleB = (Circle) bodyB;
+//                        Vec2f normal = planeA.normal;
+//                        Vec2f pointOnPlane = planeA.getPoint();
+//                        Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(circleB.pos);
+//                        float projDistance = distanceToPlane.dot(planeA.normal);
+//                        float projRadius = -circleB.radius;
+//                        float d = projRadius - projDistance;
+//                        if (d < 0) {
+//                            Vec2f closestPointOnA = new Vec2f(circleB.pos).addMulScalar(normal, projDistance);
+//                            Contact newContact = new Contact(normal, d, closestPointOnA, planeA, circleB);
+//                            contacts[numOfContacts++] = newContact;
+//                        }
                     }
                 }
             }
@@ -76,17 +85,19 @@ public class Physics {
                 for (int j = i+1; j < numOfBodies; j++) {
                     Body bodyB = bodies[j];
                     if (bodyB instanceof Circle) {
-                        Circle circleB = (Circle) bodyB;
-                        Vec2f distanceBetween = new Vec2f(circleB.pos).sub(circleA.pos);
-                        Vec2f normal = new Vec2f(distanceBetween).normalize();
-                        float projectionDistance = distanceBetween.dot(normal);
-                        float bothRadius = circleA.radius + circleB.radius;
-                        float d = projectionDistance - bothRadius;
-                        if (d < 0) {
-                            Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal, circleA.radius);
-                            Contact newContact = new Contact(normal, d, closestPointOnA, circleA, circleB);
-                            contacts[numOfContacts++] = newContact;
-                        }
+                        int newContacts = contactGenFactory.generate(bodyA, bodyB, numOfContacts, contacts);
+                        numOfContacts += newContacts;
+//                        Circle circleB = (Circle) bodyB;
+//                        Vec2f distanceBetween = new Vec2f(circleB.pos).sub(circleA.pos);
+//                        Vec2f normal = new Vec2f(distanceBetween).normalize();
+//                        float projectionDistance = distanceBetween.dot(normal);
+//                        float bothRadius = circleA.radius + circleB.radius;
+//                        float d = projectionDistance - bothRadius;
+//                        if (d < 0) {
+//                            Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal, circleA.radius);
+//                            Contact newContact = new Contact(normal, d, closestPointOnA, circleA, circleB);
+//                            contacts[numOfContacts++] = newContact;
+//                        }
                     }
                 }
             }

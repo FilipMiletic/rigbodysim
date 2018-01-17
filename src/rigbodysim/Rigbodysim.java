@@ -10,6 +10,7 @@ package rigbodysim;
 import rigbodysim.math.Vec2f;
 import rigbodysim.math.Vec2i;
 import rigbodysim.physics.*;
+import rigbodysim.physics.contact.Contact;
 
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;

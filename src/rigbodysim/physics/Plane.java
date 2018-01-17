@@ -8,7 +8,7 @@ public class Plane extends Body {
     public final float len;
 
     public Plane(Vec2f normal, float distance, float len) {
-        super(0);
+        super(0, ShapeType.PLANE);
         this.normal = normal;
         this.distance = distance;
         this.len = len;
