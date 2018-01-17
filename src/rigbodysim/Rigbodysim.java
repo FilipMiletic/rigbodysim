@@ -21,6 +21,7 @@ import java.awt.Graphics;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
+import java.security.Key;
 
 public class Rigbodysim implements KeyListener, WindowListener, MouseListener, MouseMotionListener {
 
@@ -356,6 +357,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     private boolean dragging = false;
     private Vec2i dragStart = new Vec2i();
     private Circle dragCircle = null;
+    private boolean placeCircle = false;
 
     private void updateInput(float dt) {
         boolean leftMousePressed = mouseState[1];
@@ -377,9 +379,25 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
                 }
                 if (dragCircle == null) {
-                    Circle circle;
-                    physics.addBody(circle = new Circle(30f, 0xFF00FF));
-                    circle.pos.set(mousePos.x, mousePos.y);
+                    placeCircle = true;
+
+                }
+             } else {
+                if (placeCircle) {
+                    placeCircle= false;
+                    final float radius = 1f;
+                    final int numX = 10;
+                    final int numY = 10;
+                    final float halfDimX = radius * numX;
+                    final float halfDimY = radius * numY;
+
+                    for (int y = 0; y < numY; y++) {
+                        for (int x = 0; x < numX; x++) {
+                            Circle circle;
+                            physics.addBody(circle = new Circle(radius, 0xFF00FF));
+                            circle.pos.set(mousePos.x - halfDimX + x*radius*2f, mousePos.y - halfDimY + y*radius*2f);
+                        }
+                    }
                 }
             }
         } else {
@@ -396,7 +414,8 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
         // Hide contact marks by pressing X on keyboard
         if (isKeyDown(KeyEvent.VK_X)) {
-            showContacts = false;
+            showContacts = !showContacts;
+            setKeyDown(KeyEvent.VK_X, false);
         }
 
         // Body dynamics per user input
@@ -448,11 +467,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
                 Vec2f startPoint = plane.getPoint();
                 Vec2f perp = new Vec2f(normal).perpendicularRight();
                 Vec2f endPoint = new Vec2f(startPoint).addMulScalar(perp, plane.len);
-                Vec2f center = new Vec2f(startPoint).addMulScalar(perp, plane.len * 0.5f);
                 drawLine(startPoint.x, startPoint.y, endPoint.x, endPoint.y, 0xFFFFFF);
-                drawPoint(startPoint.x, startPoint.y, 2, 0xFFFF00);
-                drawPoint(endPoint.x, endPoint.y, 2, 0xFF00FF);
-                drawNormal(center, normal);
             }
         }
 
@@ -461,7 +476,6 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             if (body instanceof Circle) {
                 Circle circle = (Circle) body;
                 drawCircle(circle.pos.x, circle.pos.y, circle.radius, circle.color, false);
-                drawPoint(circle.pos.x, circle.pos.y, 2, 0xFFFFFF);
             }
         }
         if (showContacts) {

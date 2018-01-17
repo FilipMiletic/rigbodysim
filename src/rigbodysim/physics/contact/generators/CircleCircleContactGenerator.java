@@ -20,10 +20,9 @@ public class CircleCircleContactGenerator implements ContactGenerator{
         if (d < 0) {
             Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal, circleA.radius);
             Contact newContact = new Contact(normal, d, closestPointOnA, circleA, circleB);
-            contacts[offset] = newContact;
+            contacts[offset + 0] = newContact;
             result = 1;
         }
-
         return (result);
     }
 

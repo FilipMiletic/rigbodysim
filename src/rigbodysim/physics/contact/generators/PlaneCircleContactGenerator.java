@@ -22,7 +22,7 @@ public class PlaneCircleContactGenerator implements ContactGenerator {
         if (d < 0) {
             Vec2f closestPointOnA = new Vec2f(circleB.pos).addMulScalar(normal, projDistance);
             Contact newContact = new Contact(normal, d, closestPointOnA, planeA, circleB);
-            contacts[offset] = newContact;
+            contacts[offset + 0] = newContact;
             result = 1;
         }
         return (result);
