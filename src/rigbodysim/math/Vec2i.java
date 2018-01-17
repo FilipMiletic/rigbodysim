@@ -1,4 +1,4 @@
-package rigbodysim;
+package rigbodysim.math;
 
 /**
  * Created by phil on 12/9/16.

@@ -7,6 +7,10 @@
  **/
 package rigbodysim;
 
+import rigbodysim.math.Vec2f;
+import rigbodysim.math.Vec2i;
+import rigbodysim.physics.*;
+
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
 
@@ -161,7 +165,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
 
         while (isRunning) {
             long frameStartTime = System.nanoTime();
-
+            updateInput(DT);
             updateGame(DT);
             renderGame();
 
@@ -329,85 +333,15 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         }
     }
 
-    private final int MAX_BODIES = 10000;
-    private Body[] bodies;
-    private int numOfBodies = 0;
+    private Physics physics;
 
-    private final int MAX_CONTACTS = 100000;
-    private Contact[] contacts;
-    private int numOfContacts;
-
-            /* TODO(tomorrow): Write this down in your BLACK notebook!
-               TODO(DUE date): Refresh design patterns!
-                 -------------------------------------         -------------------         -------------------
-                |                Body                 | ----> |  Geometric Shape  | ----> | Physical Material |
-                 -------------------------------------         -------------------         -------------------
-                                   |                             |-- Plane                  |-- xxx
-                                   |                             |-- Circle                 |_ ...
-                                   V                             |-- Square
-                 -------------------------------------           |__ ...
-                |   Integration    |   Acceleration   |
-                 -------------------------------------
-                                   |
-                                   |
-                                   V
-                 ---------------------------------------
-                |   Broadphase     | List pair spawning |
-                 ---------------------------------------       -------------------      #############################
-                |   Narrowphase    | Contact generation | --> | Contact generator | <== # Contact generator Factory #
-                 ---------------------------------------       -------------------      #############################
-                                   |                             |-- BodyA, BodyB
-                                   |                             |__ ShapeA, ShapeB
-                                   V                                    |-- Circle vs Circle generator
-                 -------------------------------------                  |__ Plane vs Circle generator
-                |  Contact solving |   Speed solving  |                       |__ TODO: Circle vs Plane -> flip
-                 -------------------------------------
-                                   |
-                                   |
-                                   V
-                 -------------------------------------
-                |    Integration   |      Speed       |
-                 -------------------------------------
-                                   |
-                                   |
-                                   V
-                 -------------------------------------
-                |         Position Correction         |
-                 -------------------------------------
-                                   |
-                                   |
-                                   V
-                 -------------------------------------
-                |                Cleaning             |
-                 -------------------------------------
-                                   |
-                                 -----
-                                  ---
-                                   -
-         */
-
-    /*
-     * Useful links:
-     * https://stackoverflow.com/questions/1616448/broad-phase-collision-detection-methods
-     * http://buildnewgames.com/broad-phase-collision-detection/
-     * ------------------------------------------------------------------------------------------------------------
-     * After the integration which is just down below, we generate/check for contacts between various shapes and
-     * objects. We check them in pairs, iterate through lists of different objects, detect them and display them.
-     * In the end of the process we check and correct the position of objects. That way we prevent slight
-     * overlapping and misses of our detection model. We have iterate through list of contacts, check impulses
-     * of both bodies, their ratios and correct them by applying scalar of product of correction and impulseWeight.
-     */
     private void initGame() {
-        numOfBodies = 0;
-        bodies = new Body[MAX_BODIES];
+        physics = new Physics();
 
-        bodies[numOfBodies++] = new Plane(new Vec2f(0, 1), 50, WIDTH - 1);
-        bodies[numOfBodies++] = new Plane(new Vec2f(0, -1), -(HEIGHT - 1 - 50), -(WIDTH - 1));
-        bodies[numOfBodies++] = new Plane(new Vec2f(1, 0), 50, -(HEIGHT - 1));
-        bodies[numOfBodies++] = new Plane(new Vec2f(-1, 0), -(WIDTH - 1 - 50), HEIGHT - 1);
-
-        contacts = new Contact[MAX_CONTACTS];
-        numOfContacts = 0;
+        physics.addBody(new Plane(new Vec2f(0, 1), 50, WIDTH - 1));
+        physics.addBody(new Plane(new Vec2f(0, -1), -(HEIGHT - 1 - 50), -(WIDTH - 1)));
+        physics.addBody(new Plane(new Vec2f(1, 0), 50, -(HEIGHT - 1)));
+        physics.addBody(new Plane(new Vec2f(-1, 0), -(WIDTH - 1 - 50), HEIGHT - 1));
     }
 
     private boolean isPointInCircle(float x, float y, float cx, float cy, float radius) {
@@ -417,22 +351,21 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         return lengthSquared <= radius * radius;
     }
 
+    private boolean showContacts = true;
     private boolean dragging = false;
     private Vec2i dragStart = new Vec2i();
     private Circle dragCircle = null;
 
-    private boolean showContacts = true;
-
-    private void updateGame(float dt) {
+    private void updateInput(float dt) {
         boolean leftMousePressed = mouseState[1];
 
         if (!dragging) {
             if (leftMousePressed) {
                 dragCircle = null;
-                for (int i = 0; i < numOfBodies; i++) {
-                    Body body = bodies[i];
+                for (int i = 0; i < physics.numOfBodies; i++) {
+                    Body body = physics.bodies[i];
                     if (body instanceof Circle) {
-                        Circle circle = (Circle) bodies[i];
+                        Circle circle = (Circle) physics.bodies[i];
                         if (isPointInCircle(mousePos.x, mousePos.y, circle.pos.x, circle.pos.y, circle.radius)) {
                             dragging = true;
                             dragStart.set(mousePos);
@@ -444,7 +377,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
                 }
                 if (dragCircle == null) {
                     Circle circle;
-                    bodies[numOfBodies++] = circle = new Circle(30f, 0xFF00FF);
+                    physics.addBody(circle = new Circle(30f, 0xFF00FF));
                     circle.pos.set(mousePos.x, mousePos.y);
                 }
             }
@@ -461,156 +394,32 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         }
 
         // Hide contact marks by pressing X on keyboard
-        if (isKeyDown(88)) {
+        if (isKeyDown(KeyEvent.VK_X)) {
             showContacts = false;
-            setKeyDown(88, false);
         }
 
         // Body dynamics per user input
-        for (int i = 0; i < numOfBodies; i++) {
-            Body body = bodies[i];
+        for (int i = 0; i < physics.numOfBodies; i++) {
+            Body body = physics.bodies[i];
 
-            if (isKeyDown(87)) {
-                // W pressed
+            if (isKeyDown(KeyEvent.VK_W)) {
                 body.acc.y += 12 / dt;
-            } else if (isKeyDown(83)) {
-                // S pressed
+            } else if (isKeyDown(KeyEvent.VK_S)) {
                 body.acc.y -= 12f / dt;
             }
 
-            if (isKeyDown(65)) {
-                // A pressed
+            if (isKeyDown(KeyEvent.VK_A)) {
                 body.acc.x -= 12f / dt;
-            } else if (isKeyDown(68)) {
-                // D pressed
+            } else if (isKeyDown(KeyEvent.VK_D)) {
                 body.acc.x += 12f / dt;
             }
         }
-
-        // Gravity
-        for (int i = 0; i < numOfBodies; i++) {
-            Body body = bodies[i];
-            if (body.impulseWeight > 0) {
-                body.acc.y += -10f / dt;
-            }
-        }
-
-        // Integration (Acceleration)
-        for (int i = 0; i < numOfBodies; i++) {
-            Body body = bodies[i];
-            if (body.impulseWeight > 0) {
-                body.vel.addMulScalar(body.acc, dt);
-            }
-        }
-
-        numOfContacts = 0;
-        // Contact detection between line and circle
-        for (int i = 0; i < numOfBodies; i++) {
-            Body bodyA = bodies[i];
-            if (bodyA instanceof Plane) {
-                Plane planeA = (Plane) bodyA;
-                for (int j = i+1; j < numOfBodies; j++) {
-                    Body bodyB = bodies[j];
-                    if (bodyB instanceof Circle) {
-                        Circle circleB = (Circle) bodyB;
-                        Vec2f normal = planeA.normal;
-                        Vec2f pointOnPlane = planeA.getPoint();
-                        Vec2f distanceToPlane = new Vec2f(pointOnPlane).sub(circleB.pos);
-                        float projDistance = distanceToPlane.dot(planeA.normal);
-                        float projRadius = -circleB.radius;
-                        float d = projRadius - projDistance;
-                        if (d < 0) {
-                            Vec2f closestPointOnA = new Vec2f(circleB.pos).addMulScalar(normal, projDistance);
-                            Contact newContact = new Contact(normal, d, closestPointOnA, planeA, circleB);
-                            contacts[numOfContacts++] = newContact;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Contact detection between two circles
-        for (int i = 0; i < numOfBodies; i++) {
-            Body bodyA = bodies[i];
-            if (bodyA instanceof Circle) {
-                Circle circleA = (Circle) bodyA;
-                for (int j = i+1; j < numOfBodies; j++) {
-                    Body bodyB = bodies[j];
-                    if (bodyB instanceof Circle) {
-                        Circle circleB = (Circle) bodyB;
-                        Vec2f distanceBetween = new Vec2f(circleB.pos).sub(circleA.pos);
-                        Vec2f normal = new Vec2f(distanceBetween).normalize();
-                        float projectionDistance = distanceBetween.dot(normal);
-                        float bothRadius = circleA.radius + circleB.radius;
-                        float d = projectionDistance - bothRadius;
-                        if (d < 0) {
-                            Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal, circleA.radius);
-                            Contact newContact = new Contact(normal, d, closestPointOnA, circleA, circleB);
-                            contacts[numOfContacts++] = newContact;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Contact
-        final int velocitySolverIterations = 100;
-        final float restitution = 0.0f;
-        for (int j = 0; j < velocitySolverIterations; j++) {
-            for (int i = 0; i < numOfContacts; i++) {
-                Contact contact = contacts[i];
-                Vec2f normal = contact.normal;
-                Body bodyA = contact.bodyA;
-                Body bodyB = contact.bodyB;
-                Vec2f vA = bodyA.vel;
-                Vec2f vB = bodyB.vel;
-                Vec2f vAB = new Vec2f(vB).sub(vA);
-                float impulseWeightA = bodyA.impulseWeight;
-                float impulseWeightB = bodyB.impulseWeight;
-                float impulseRatio = 1.0f / (impulseWeightA + impulseWeightB);
-                float projRelVel = vAB.dot(normal);
-
-                if (projRelVel < 0) {
-                    float e = 1.0f + restitution;
-                    float impulse = (projRelVel) * e * impulseRatio;
-                    vA.addMulScalar(normal, impulse * impulseWeightA);
-                    vB.addMulScalar(normal, -impulse * impulseWeightB);
-                }
-            }
-        }
-
-        // Integration (Speed)
-        for (int i = 0; i < numOfBodies; i++) {
-            Body body = bodies[i];
-            if (body.impulseWeight > 0) {
-                body.pos.addMulScalar(body.vel, dt);
-            }
-        }
-
-        // Check for correct position
-        final float minDistance = 0.01f;
-        final float maxCorrection = 0.5f;
-        for (int i = 0; i < numOfContacts; i++) {
-            Contact contact = contacts[i];
-            Vec2f normal = contact.normal;
-            Body bodyA = contact.bodyA;
-            Body bodyB = contact.bodyB;
-            float impulseWeightA = bodyA.impulseWeight;
-            float impulseWeightB = bodyB.impulseWeight;
-            float impulseRatio = 1.0f / (impulseWeightA + impulseWeightB);
-            float correction = (contact.distance + minDistance) * maxCorrection * impulseRatio;
-            bodyA.pos.addMulScalar(normal, correction * impulseWeightA);
-            bodyB.pos.addMulScalar(normal, -correction * impulseWeightB);
-        }
-
-        // Cleaning
-        for (int i = 0; i < numOfBodies; i++) {
-            Body body = bodies[i];
-            if (body.impulseWeight > 0) {
-                body.acc.zero();
-            }
-        }
     }
+
+    private void updateGame(float dt) {
+        physics.step(dt);
+    }
+
 
     private void drawNormal(Vec2f center, Vec2f normal) {
         final float arrowRadiusX = 8;
@@ -630,8 +439,8 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             frameBufferData[i] = 0x000000;
         }
 
-        for (int i = 0; i < numOfBodies; i++) {
-            Body body = bodies[i];
+        for (int i = 0; i < physics.numOfBodies; i++) {
+            Body body = physics.bodies[i];
             if (body instanceof Plane) {
                 Plane plane = (Plane) body;
                 Vec2f normal = plane.normal;
@@ -646,8 +455,8 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             }
         }
 
-        for (int i = 0; i < numOfBodies; i++) {
-            Body body = bodies[i];
+        for (int i = 0; i < physics.numOfBodies; i++) {
+            Body body = physics.bodies[i];
             if (body instanceof Circle) {
                 Circle circle = (Circle) body;
                 drawCircle(circle.pos.x, circle.pos.y, circle.radius, circle.color, false);
@@ -655,8 +464,8 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             }
         }
         if (showContacts) {
-            for (int i = 0; i < numOfContacts; i++) {
-                Contact contact = contacts[i];
+            for (int i = 0; i < physics.numOfContacts; i++) {
+                Contact contact = physics.contacts[i];
                 Vec2f normal = contact.normal;
                 Vec2f closestPointOnPlane = contact.point;
                 Vec2f closestPointOnBox = new Vec2f(closestPointOnPlane).addMulScalar(normal, contact.distance);

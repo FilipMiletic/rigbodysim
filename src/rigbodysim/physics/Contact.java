@@ -1,4 +1,6 @@
-package rigbodysim;
+package rigbodysim.physics;
+
+import rigbodysim.math.Vec2f;
 
 public class Contact {
     public final Vec2f normal;

@@ -1,5 +1,7 @@
-package rigbodysim;
+package rigbodysim.physics;
 
+
+import rigbodysim.math.Vec2f;
 
 public class Body {
     public final Vec2f pos = new Vec2f();

@@ -1,4 +1,4 @@
-package rigbodysim;
+package rigbodysim.physics;
 
 public class Circle extends Body {
 
