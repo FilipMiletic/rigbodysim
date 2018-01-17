@@ -37,4 +37,64 @@ Distance registering between different geometrical types
 
 --------------------------------------------------------------------------------
 
-339bc663 -- ZA PROFESORA
+
+            /* TODO(tomorrow): Write this down in your BLACK notebook!
+               TODO(DUE date): Refresh design patterns!
+                 -------------------------------------         -------------------         -------------------
+                |                Body                 | ----> |  Geometric Shape  | ----> | Physical Material |
+                 -------------------------------------         -------------------         -------------------
+                                   |                             |-- Plane                  |-- xxx
+                                   |                             |-- Circle                 |_ ...
+                                   V                             |-- Square
+                 -------------------------------------           |__ ...
+                |   Integration    |   Acceleration   |
+                 -------------------------------------
+                                   |
+                                   |
+                                   V
+                 ---------------------------------------
+                |   Broadphase     | List pair spawning |
+                 ---------------------------------------       -------------------      #############################
+                |   Narrowphase    | Contact generation | --> | Contact generator | <== # Contact generator Factory #
+                 ---------------------------------------       -------------------      #############################
+                                   |                             |-- BodyA, BodyB
+                                   |                             |__ ShapeA, ShapeB
+                                   V                                    |-- Circle vs Circle generator
+                 -------------------------------------                  |__ Plane vs Circle generator
+                |  Contact solving |   Speed solving  |                       |__ TODO: Circle vs Plane -> flip
+                 -------------------------------------
+                                   |
+                                   |
+                                   V
+                 -------------------------------------
+                |    Integration   |      Speed       |
+                 -------------------------------------
+                                   |
+                                   |
+                                   V
+                 -------------------------------------
+                |         Position Correction         |
+                 -------------------------------------
+                                   |
+                                   |
+                                   V
+                 -------------------------------------
+                |                Cleaning             |
+                 -------------------------------------
+                                   |
+                                 -----
+                                  ---
+                                   -
+         */
+
+    /*
+     * Useful links:
+     * https://stackoverflow.com/questions/1616448/broad-phase-collision-detection-methods
+     * http://buildnewgames.com/broad-phase-collision-detection/
+     * ------------------------------------------------------------------------------------------------------------
+     * After the integration which is just down below, we generate/check for contacts between various shapes and
+     * objects. We check them in pairs, iterate through lists of different objects, detect them and display them.
+     * In the end of the process we check and correct the position of objects. That way we prevent slight
+     * overlapping and misses of our detection model. We have iterate through list of contacts, check impulses
+     * of both bodies, their ratios and correct them by applying scalar of product of correction and impulseWeight.
+     */
