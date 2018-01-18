@@ -21,7 +21,7 @@ import java.awt.Graphics;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
-import java.security.Key;
+// import java.security.Key;
 
 public class Rigbodysim implements KeyListener, WindowListener, MouseListener, MouseMotionListener {
 
@@ -249,6 +249,22 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         drawRect((int) x0, (int) y0, (int) x1, (int) y1, color);
     }
 
+    private void errSetSafe(int dx, int dy, int signX, int signY, int color, int minX, int minY, boolean cond) {
+        int err = dx/2;
+        int j = 0;
+        for (int k = 0; k < dx; k++) {
+            err = err - dy;
+            if (err < 0) {
+                j++;
+                err = err + dx;
+            }
+            if (cond)
+                setPixelSafe(minX + k*signX, minY + j*signY, color);
+            else
+                setPixelSafe(minX + j*signX, minY + k*signY, color);
+        }
+    }
+
     private void drawLine(int x0, int y0, int x1, int y1, int color) {
         int minX = x0;
         int minY = y0;
@@ -264,29 +280,34 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         dx = Math.abs(dx);
         dy = Math.abs(dy);
 
-        if (dx > dy) {
-            int err = dx / 2;
-            int y = 0;
-            for (int x = 0; x < dx; x++) {
-                err = err - dy;
-                if (err < 0) {
-                    y++;
-                    err = err + dx;
-                }
-                setPixelSafe(minX + x * signX, minY + y * signY, color);
-            }
-        } else {
-            int err = dy / 2;
-            int x = 0;
-            for (int y = 0; y < dy; y++) {
-                err = err - dx;
-                if (err < 0) {
-                    x++;
-                    err = err + dy;
-                }
-                setPixelSafe(minX + x * signX, minY + y * signY, color);
-            }
-        }
+//        if (dx > dy) {
+//            int err = dx / 2;
+//            int y = 0;
+//            for (int x = 0; x < dx; x++) {
+//                err = err - dy;
+//                if (err < 0) {
+//                    y++;
+//                    err = err + dx;
+//                }
+//                setPixelSafe(minX + x * signX, minY + y * signY, color);
+//            }
+//        } else {
+//            int err = dy / 2;
+//            int x = 0;
+//            for (int y = 0; y < dy; y++) {
+//                err = err - dx;
+//                if (err < 0) {
+//                    x++;
+//                    err = err + dy;
+//                }
+//                setPixelSafe(minX + x * signX, minY + y * signY, color);
+//            }
+//        }
+        boolean dxGreater = dx > dy;
+        if (dxGreater)
+            errSetSafe(dx, dy, signX, signY, color, minX, minY, dxGreater);
+        else
+            errSetSafe(dy, dx, signX, signY, color, minX, minY, dxGreater);
     }
 
     private void drawLine(float x0, float y0, float x1, float y1, int color) {

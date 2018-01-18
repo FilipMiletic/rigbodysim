@@ -77,11 +77,11 @@ public class Physics {
                 float impulseWeightA = bodyA.impulseWeight;
                 float impulseWeightB = bodyB.impulseWeight;
                 float impulseRatio = 1.0f / (impulseWeightA + impulseWeightB);
-                float projRelVel = vAB.dot(normal);
+                float projectedRelVel = vAB.dot(normal);
 
-                if (projRelVel < 0) {
+                if (projectedRelVel < 0) {
                     float e = 1.0f + restitution;
-                    float impulse = (projRelVel) * e * impulseRatio;
+                    float impulse = (projectedRelVel) * e * impulseRatio;
                     vA.addMulScalar(normal, impulse * impulseWeightA);
                     vB.addMulScalar(normal, -impulse * impulseWeightB);
                 }

@@ -17,12 +17,16 @@ public class CircleCircleContactGenerator implements ContactGenerator{
         float projectionDistance = distanceBetween.dot(normal);
         float bothRadius = circleA.radius + circleB.radius;
         float d = projectionDistance - bothRadius;
+
         if (d < 0) {
             Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal, circleA.radius);
             Contact newContact = new Contact(normal, d, closestPointOnA, circleA, circleB);
+
             contacts[offset + 0] = newContact;
             result = 1;
         }
+
+
         return (result);
     }
 
