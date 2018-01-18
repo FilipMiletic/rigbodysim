@@ -7,7 +7,7 @@ public enum ShapeType {
 
     public final int id;
 
-    private ShapeType(int id) {
+    ShapeType(int id) {
         this.id = id;
     }
 

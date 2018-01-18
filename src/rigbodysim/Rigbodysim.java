@@ -7,6 +7,7 @@
  **/
 package rigbodysim;
 
+import com.sun.javafx.binding.StringFormatter;
 import rigbodysim.math.Vec2f;
 import rigbodysim.math.Vec2i;
 import rigbodysim.physics.*;
@@ -25,7 +26,7 @@ import java.awt.image.DataBufferInt;
 
 public class Rigbodysim implements KeyListener, WindowListener, MouseListener, MouseMotionListener {
 
-    private final String TITLE = "PhySim";
+    private final String TITLE = "Filip Miletic 359/2016";
     private final int WIDTH = 800;
     private final int HEIGHT = 600;
     private JFrame frame;
@@ -162,13 +163,28 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         final long NANO_SECONDS_FPS = NANO_SECOND / TARGET_FPS;
         final float DT = 1.0f / (float) TARGET_FPS;
         long startFPSTime = System.currentTimeMillis();
+        long lastFrameTime = System.nanoTime();
+        float accumulatedTime = 0.0f;
         int numFrames = 0;
         boolean isRunning = true;
 
         while (isRunning) {
             long frameStartTime = System.nanoTime();
+            float frameTime = Math.min((frameStartTime - lastFrameTime)/(float)NANO_SECOND, 0.25f);
+            lastFrameTime = frameStartTime;
+
+
+            // Phases: Loop [Input -> Calculations -> Render]
             updateInput(DT);
-            updateGame(DT);
+
+            // HACK: Let updates catch up frameTime
+            // I'm not happy how this works. Probably got something wrong on StackOverflow
+            accumulatedTime += frameTime;
+            while (accumulatedTime >= DT) {
+                updateGame(DT);
+                accumulatedTime -= DT;
+            }
+
             renderGame();
 
             // Framebuffer displaying
@@ -178,8 +194,8 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
             numFrames++;
 
             // Display frame every second
-            if (System.currentTimeMillis() - startFPSTime > 1000) {
-                System.out.println("Frames: " + numFrames);
+            if (System.currentTimeMillis() - startFPSTime >= 1000) {
+                System.out.println(String.format("[Frames: %d, Bodies: %d, Contacts: %d]", numFrames, physics.numOfBodies, physics.numOfContacts));
                 startFPSTime = System.currentTimeMillis();
                 numFrames = 0;
             }
@@ -192,8 +208,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
                 while (System.nanoTime() - sleepStart < sleepDuration) {
                     try {
                         Thread.sleep(1);
-                    } catch (InterruptedException e) {
-                    }
+                    } catch (InterruptedException e) { }
                 }
             }
         }
@@ -249,6 +264,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         drawRect((int) x0, (int) y0, (int) x1, (int) y1, color);
     }
 
+    // Point clipping
     private void errSetSafe(int dx, int dy, int signX, int signY, int color, int minX, int minY, boolean cond) {
         int err = dx/2;
         int j = 0;
@@ -265,6 +281,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         }
     }
 
+    // Bresenham's line drawing algorithm
     private void drawLine(int x0, int y0, int x1, int y1, int color) {
         int minX = x0;
         int minY = y0;
@@ -299,6 +316,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         return x * x + y * y - r * r;
     }
 
+    // Bresenham's circle drawing algorithm
     private void drawCircle(float cx, float cy, float radius, int color, boolean filled) {
         float x = 0f;
         float y = radius;
@@ -351,7 +369,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         return lengthSquared <= radius * radius;
     }
 
-    private boolean showContacts = true;
+    private boolean showContacts = false;
     private boolean dragging = false;
     private Vec2i dragStart = new Vec2i();
     private Circle dragCircle = null;
@@ -383,9 +401,9 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
              } else {
                 if (placeCircle) {
                     placeCircle= false;
-                    final float radius = 1f;
-                    final int numX = 10;
-                    final int numY = 10;
+                    final float radius = 10f;
+                    final int numX = 9;
+                    final int numY = 9;
                     final float halfDimX = radius * numX;
                     final float halfDimY = radius * numY;
 

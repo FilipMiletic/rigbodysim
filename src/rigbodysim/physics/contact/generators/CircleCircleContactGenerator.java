@@ -22,7 +22,7 @@ public class CircleCircleContactGenerator implements ContactGenerator{
             Vec2f closestPointOnA = new Vec2f(circleA.pos).addMulScalar(normal, circleA.radius);
             Contact newContact = new Contact(normal, d, closestPointOnA, circleA, circleB);
 
-            contacts[offset + 0] = newContact;
+            contacts[offset] = newContact;
             result = 1;
         }
 
