@@ -280,29 +280,6 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         dx = Math.abs(dx);
         dy = Math.abs(dy);
 
-//        if (dx > dy) {
-//            int err = dx / 2;
-//            int y = 0;
-//            for (int x = 0; x < dx; x++) {
-//                err = err - dy;
-//                if (err < 0) {
-//                    y++;
-//                    err = err + dx;
-//                }
-//                setPixelSafe(minX + x * signX, minY + y * signY, color);
-//            }
-//        } else {
-//            int err = dy / 2;
-//            int x = 0;
-//            for (int y = 0; y < dy; y++) {
-//                err = err - dx;
-//                if (err < 0) {
-//                    x++;
-//                    err = err + dy;
-//                }
-//                setPixelSafe(minX + x * signX, minY + y * signY, color);
-//            }
-//        }
         boolean dxGreater = dx > dy;
         if (dxGreater)
             errSetSafe(dx, dy, signX, signY, color, minX, minY, dxGreater);
