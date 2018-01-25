@@ -22,7 +22,6 @@ import java.awt.Graphics;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
-// import java.security.Key;
 
 public class Rigbodysim implements KeyListener, WindowListener, MouseListener, MouseMotionListener {
 
@@ -36,7 +35,6 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     private boolean[] keyState = new boolean[128];
     private boolean[] mouseState = new boolean[16];
     private Vec2i mousePos = new Vec2i();
-
 
     public Rigbodysim() {
         frameBuffer = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
@@ -155,6 +153,7 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
     public void mouseExited(MouseEvent e) {
     }
 
+    @SuppressWarnings("InfiniteLoopStatement")
     private void run() {
         initGame();
 
@@ -166,13 +165,12 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
         long lastFrameTime = System.nanoTime();
         float accumulatedTime = 0.0f;
         int numFrames = 0;
-        boolean isRunning = true;
+        //XXX boolean isRunning = true;
 
-        while (isRunning) {
+        while (true) try {
             long frameStartTime = System.nanoTime();
             float frameTime = Math.min((frameStartTime - lastFrameTime)/(float)NANO_SECOND, 0.25f);
             lastFrameTime = frameStartTime;
-
 
             // Phases: Loop [Input -> Calculations -> Render]
             updateInput(DT);
@@ -208,9 +206,14 @@ public class Rigbodysim implements KeyListener, WindowListener, MouseListener, M
                 while (System.nanoTime() - sleepStart < sleepDuration) {
                     try {
                         Thread.sleep(1);
-                    } catch (InterruptedException e) { }
+                    } catch (InterruptedException e) {
+                        System.out.println(e.getLocalizedMessage());
+                    }
                 }
             }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            e.getStackTrace();
         }
     }
 

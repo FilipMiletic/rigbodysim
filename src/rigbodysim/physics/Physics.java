@@ -33,7 +33,7 @@ public class Physics {
     }
 
     public void step(float dt) {
-        // Gravity
+        // Integration for gravity
         for (int i = 0; i < numOfBodies; i++) {
             Body body = bodies[i];
             if (body.impulseWeight > 0) {
@@ -41,7 +41,7 @@ public class Physics {
             }
         }
 
-        // Integration (Acceleration)
+        // Integration for acceleration
         for (int i = 0; i < numOfBodies; i++) {
             Body body = bodies[i];
             if (body.impulseWeight > 0) {
@@ -62,14 +62,16 @@ public class Physics {
             }
         }
 
-        // Contact
-        // TODO: THIS STINKS! Whole simulation blows when number of contacts goes beyond 2k!
-        // I would probably need to re-implement this part as it is one of the core unoptimised parts of whole simulation.
-        // The problem is next: The more I increment velocitySolverIterations the more program pops at lower number of
-        // contacts. So, I need to think of way to make this part go faster! Thought about loop unrolling but it doesn't
-        // seem like logical thing to do. I will probably need to reapproach the whole problem from different angle
-        // and restructure the computation, because here I just calculated formulas with given parameters.
-        final int velocitySolverIterations = 1000;
+        /* Contact
+         *
+         * TODO: THIS STINKS! Whole simulation blows when number of contacts goes beyond 2k!
+         * I would probably need to re-implement this part as it is one of the core unoptimised parts of whole simulation.
+         * The problem is next: The more I increment velocitySolverIterations the more program pops at lower number of
+         * contacts. So, I need to think of way to make this part go faster! Thought about loop unrolling but it doesn't
+         * seem like logical thing to do. I will probably need to reproach the whole problem from different angle
+         * and restructure the computation, because here I just calculated formulas with given parameters.
+         */
+        final int velocitySolverIterations = 100;
         final float restitution = 0.0f;
         for (int j = 0; j < velocitySolverIterations; j++) {
             for (int i = 0; i < numOfContacts; i++) {
